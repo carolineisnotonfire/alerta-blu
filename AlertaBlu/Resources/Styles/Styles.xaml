@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        Application chrome and the shared typography/card vocabulary of the "Nocturne" handoff.
+        Font sizes are the mockup's own inline values; MAUI's device-independent units track CSS
+        px closely enough at this scale to use them verbatim.
+
+        "Medium" weight in the handoff maps to OpenSansSemibold: headings are never bolder than
+        medium there, and Inter is not bundled with this project. FontAttributes="Bold" is
+        deliberately unused so nothing renders heavier than the design allows.
+    -->
+
+    <!-- ============ Control defaults ============ -->
+
+    <Style TargetType="Page" ApplyToDerivedTypes="True">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="BackgroundColor" Value="{StaticResource PageBg}" />
+    </Style>
+
+    <Style TargetType="Shell" ApplyToDerivedTypes="True">
+        <Setter Property="Shell.BackgroundColor" Value="{StaticResource PageBg}" />
+        <Setter Property="Shell.ForegroundColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="Shell.TitleColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="Shell.DisabledColor" Value="{StaticResource TextNeutral500}" />
+        <Setter Property="Shell.UnselectedColor" Value="{StaticResource TextNeutral400}" />
+        <Setter Property="Shell.NavBarHasShadow" Value="False" />
+    </Style>
+
+    <Style TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style TargetType="Border">
+        <Setter Property="Stroke" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape">
+            <Setter.Value>
+                <RoundRectangle CornerRadius="12" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ActivityIndicator">
+        <Setter Property="Color" Value="{StaticResource Accent}" />
+    </Style>
+
+    <Style TargetType="RefreshView">
+        <Setter Property="RefreshColor" Value="{StaticResource Accent}" />
+    </Style>
+
+    <Style TargetType="ProgressBar">
+        <Setter Property="ProgressColor" Value="{StaticResource AccentStrong}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource Outline}" />
+    </Style>
+
+    <Style TargetType="SearchBar">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource TextNeutral500}" />
+        <Setter Property="CancelButtonColor" Value="{StaticResource TextNeutral400}" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
+    </Style>
+
+    <!-- ============ Surfaces ============ -->
+
+    <Style x:Key="CardStyle" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource CardBg}" />
+        <Setter Property="Stroke" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="StrokeShape">
+            <Setter.Value>
+                <RoundRectangle CornerRadius="16" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A card body that carries its own border only, e.g. the dam rows inside the dams section. -->
+    <Style x:Key="OutlinedCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="StrokeShape">
+            <Setter.Value>
+                <RoundRectangle CornerRadius="12" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ Typography ============ -->
+
+    <!-- Section heading above a group, e.g. "PREVISÃO 5 DIAS". -->
+    <Style x:Key="SectionTitleStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CharacterSpacing" Value="1" />
+        <Setter Property="TextColor" Value="{StaticResource TextNeutral300}" />
+        <Setter Property="Margin" Value="2,0,0,8" />
+    </Style>
+
+    <!-- Uppercase label inside a card, e.g. "NÍVEL DO RIO — PONTE ITAJAÍ-AÇU". -->
+    <Style x:Key="CardKickerStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="CharacterSpacing" Value="0.8" />
+        <Setter Property="TextColor" Value="{StaticResource Accent}" />
+        <Setter Property="VerticalTextAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="HeadlineStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="40" />
+        <Setter Property="LineHeight" Value="1" />
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+    </Style>
+
+    <Style x:Key="SubHeadlineStyle" TargetType="Label" BasedOn="{StaticResource HeadlineStyle}">
+        <Setter Property="FontSize" Value="30" />
+    </Style>
+
+    <!-- Secondary body copy: the feels-like line, the stats row, dam details. -->
+    <Style x:Key="BodyTextStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource TextNeutral400}" />
+    </Style>
+
+    <Style x:Key="MetaTextStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="TextColor" Value="{StaticResource TextNeutral500}" />
+        <Setter Property="VerticalTextAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="ErrorTextStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource DangerText}" />
+        <Setter Property="Margin" Value="0,6,0,0" />
+    </Style>
+
+    <!-- ============ Tags ============ -->
+
+    <Style x:Key="TagStyle" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource TagNeutralBg}" />
+        <Setter Property="Stroke" Value="{StaticResource TransparentBrush}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="Padding" Value="9,4" />
+        <Setter Property="StrokeShape">
+            <Setter.Value>
+                <RoundRectangle CornerRadius="10" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TagTextStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="TextColor" Value="{StaticResource TextNeutral300}" />
+    </Style>
+
+</ResourceDictionary>

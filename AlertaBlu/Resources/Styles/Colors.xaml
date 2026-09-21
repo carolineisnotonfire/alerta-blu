@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        "Nocturne" tokens, sampled from the design handoff screenshots.
+
+        The screen is dark-only by design (see design_handoff_weather_river/README.md), so these
+        are plain colours rather than AppThemeBinding pairs: there is no light palette to switch
+        to, and App.xaml.cs pins UserAppTheme to Dark so native controls follow suit.
+
+        Every colour used as a Stroke also has a matching SolidColorBrush: MAUI's Stroke/Brush
+        properties do not accept a Color resource.
+    -->
+
+    <!-- Surfaces -->
+    <Color x:Key="PageBg">#161928</Color>
+    <Color x:Key="CardBg">#222534</Color>
+    <Color x:Key="Outline">#3D404F</Color>
+
+    <!-- Text, most to least emphasis -->
+    <Color x:Key="TextPrimary">#E9E9ED</Color>
+    <Color x:Key="TextNeutral300">#C4C7D6</Color>
+    <Color x:Key="TextNeutral400">#9A9DB0</Color>
+    <Color x:Key="TextNeutral500">#6E7086</Color>
+
+    <!-- Accent (blurple): outline / glow / icon colour, never a large fill -->
+    <Color x:Key="Accent">#9184D9</Color>
+    <Color x:Key="AccentSoft">#B4A8EA</Color>
+    <Color x:Key="AccentStrong">#6F5FC7</Color>
+
+    <!--
+        The mockup washes are color-mix(accent 14%/10%, transparent). Expressed as #AARRGGBB so
+        they composite over whatever is behind them (page background for the day chips, card
+        background for the cota rows) instead of being baked against one surface.
+    -->
+    <Color x:Key="AccentWash14">#249184D9</Color>
+    <Color x:Key="AccentWash10">#1A9184D9</Color>
+
+    <!-- Tags -->
+    <Color x:Key="TagNeutralBg">#3E424B</Color>
+    <Color x:Key="TagAccentBg">#423A69</Color>
+
+    <!-- Failure messages for a section that could not load -->
+    <Color x:Key="DangerText">#F2B8B5</Color>
+
+    <SolidColorBrush x:Key="PageBgBrush" Color="{StaticResource PageBg}" />
+    <SolidColorBrush x:Key="CardBgBrush" Color="{StaticResource CardBg}" />
+    <SolidColorBrush x:Key="OutlineBrush" Color="{StaticResource Outline}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
+    <SolidColorBrush x:Key="TextNeutral300Brush" Color="{StaticResource TextNeutral300}" />
+    <SolidColorBrush x:Key="TextNeutral400Brush" Color="{StaticResource TextNeutral400}" />
+    <SolidColorBrush x:Key="TextNeutral500Brush" Color="{StaticResource TextNeutral500}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoft}" />
+    <SolidColorBrush x:Key="AccentStrongBrush" Color="{StaticResource AccentStrong}" />
+    <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
+
+</ResourceDictionary>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Application layer: the use-case ports the presentation layer talks to, stated purely in
+		terms of domain types. Depends on the domain and nothing else, so the concrete scraping
+		implementation stays substitutable and the dependency arrow points inwards.
+	-->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>AlertaBlu.Application</RootNamespace>
+		<AssemblyName>AlertaBlu.Application</AssemblyName>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AlertaBlu.Domain\AlertaBlu.Domain.csproj" />
+	</ItemGroup>
+
+</Project>

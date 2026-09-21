@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Domain layer: the entities and the value formatting they own, plus the pt-BR parsing and
+		formatting conventions they are expressed in. Bottom of the dependency graph on purpose —
+		nothing beyond the BCL, no packages, no project references, so every other layer can take
+		a dependency on it without dragging anything along.
+	-->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>AlertaBlu.Domain</RootNamespace>
+		<AssemblyName>AlertaBlu.Domain</AssemblyName>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+</Project>

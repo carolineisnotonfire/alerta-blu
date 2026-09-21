@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>AlertaBlu.Tests</RootNamespace>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<!--
+		The domain, application and infrastructure layers are plain net10.0 libraries free of MAUI
+		types, so they are referenced as projects. Only the presentation head multi-targets platform
+		TFMs, and nothing under test lives there.
+	-->
+	<ItemGroup>
+		<ProjectReference Include="..\AlertaBlu.Domain\AlertaBlu.Domain.csproj" />
+		<ProjectReference Include="..\AlertaBlu.Application\AlertaBlu.Application.csproj" />
+		<ProjectReference Include="..\AlertaBlu.Infrastructure\AlertaBlu.Infrastructure.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+		<PackageReference Include="xunit.v3" Version="3.2.2" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+	</ItemGroup>
+
+</Project>

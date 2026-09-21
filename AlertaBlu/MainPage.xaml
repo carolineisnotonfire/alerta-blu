@@ -1,0 +1,524 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:AlertaBlu.Domain;assembly=AlertaBlu.Domain"
+             xmlns:vm="clr-namespace:AlertaBlu.ViewModels"
+             x:Class="AlertaBlu.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="Alerta Rio"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource PageBg}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+
+            <!--
+                Line icons from the design handoff, kept as vector geometries rather than image
+                assets because several of them change colour with state (the chip icon tints
+                accent when selected, the trend arrow follows the river). The source is SVG with
+                viewBox "0 0 256 256"; MAUI's path mini-language accepts that syntax verbatim,
+                and Aspect="Uniform" scales each one into its 22pt box. Stroke width is restated
+                per style because MAUI strokes in view units, not in the 256-unit design space.
+            -->
+            <PathGeometry x:Key="IconCloud"
+                          Figures="M56 200a48 48 0 0 1 0-96 64 64 0 0 1 124-24 52 52 0 0 1 12 102H56Z" />
+            <PathGeometry x:Key="IconRain"
+                          Figures="M56 176a48 48 0 0 1 0-96 64 64 0 0 1 124-24 52 52 0 0 1 12 102H56Z M96 216l-16 24 M144 216l-16 24 M192 216l-16 24" />
+            <PathGeometry x:Key="IconSun"
+                          Figures="M128 176a48 48 0 1 0 0-96 48 48 0 0 0 0 96Z M128 40v-8 M128 224v-8 M56 128h-8 M208 128h-8 M75 75l-6-6 M187 75l6-6 M75 181l-6 6 M187 181l6 6" />
+            <PathGeometry x:Key="IconCloudSun"
+                          Figures="M100 100a44 44 0 1 1-8-88 M64 208a44 44 0 0 1 0-88 60 60 0 0 1 116-20 48 48 0 0 1 8 96Z" />
+            <PathGeometry x:Key="IconUp"
+                          Figures="M128 216V64 M72 120l56-56 56 56" />
+            <PathGeometry x:Key="IconDown"
+                          Figures="M128 40v152 M72 136l56 56 56-56" />
+            <PathGeometry x:Key="IconFlat"
+                          Figures="M48 128h160" />
+            <PathGeometry x:Key="IconChevron"
+                          Figures="M64 96l64 64 64-64" />
+
+            <!--
+                Every value a trigger can change is set through a Style rather than on the element:
+                MAUI ranks a locally-set value above a trigger setter, so an inline default would
+                make the selected/current states silently stop painting.
+            -->
+            <Style x:Key="IconStyle" TargetType="Path">
+                <Setter Property="Aspect" Value="Uniform" />
+                <Setter Property="WidthRequest" Value="22" />
+                <Setter Property="HeightRequest" Value="22" />
+                <Setter Property="StrokeThickness" Value="1.4" />
+                <Setter Property="StrokeLineCap" Value="Round" />
+                <Setter Property="StrokeLineJoin" Value="Round" />
+                <Setter Property="HorizontalOptions" Value="Center" />
+                <Setter Property="VerticalOptions" Value="Center" />
+                <Setter Property="Data" Value="{StaticResource IconCloud}" />
+                <Setter Property="Stroke" Value="{StaticResource TextNeutral400Brush}" />
+            </Style>
+
+            <Style x:Key="HeroIconStyle" TargetType="Path" BasedOn="{StaticResource IconStyle}">
+                <Setter Property="WidthRequest" Value="30" />
+                <Setter Property="HeightRequest" Value="30" />
+                <Setter Property="StrokeThickness" Value="1.7" />
+                <Setter Property="Stroke" Value="{StaticResource AccentSoftBrush}" />
+            </Style>
+
+            <Style x:Key="TrendIconStyle" TargetType="Path" BasedOn="{StaticResource IconStyle}">
+                <Setter Property="Data" Value="{StaticResource IconFlat}" />
+                <Setter Property="Stroke" Value="{StaticResource AccentSoftBrush}" />
+            </Style>
+
+            <Style x:Key="ChevronStyle" TargetType="Path" BasedOn="{StaticResource IconStyle}">
+                <Setter Property="WidthRequest" Value="16" />
+                <Setter Property="HeightRequest" Value="16" />
+                <Setter Property="StrokeThickness" Value="1.8" />
+                <Setter Property="Data" Value="{StaticResource IconChevron}" />
+                <Setter Property="Stroke" Value="{StaticResource TextNeutral500Brush}" />
+            </Style>
+
+            <Style x:Key="DayChipStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="Stroke" Value="{StaticResource TransparentBrush}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="Padding" Value="4,10" />
+                <Setter Property="StrokeShape">
+                    <Setter.Value>
+                        <RoundRectangle CornerRadius="12" />
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- One official river band inside the expanded card. -->
+            <Style x:Key="BandRowStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="Stroke" Value="{StaticResource OutlineBrush}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="StrokeShape">
+                    <Setter.Value>
+                        <RoundRectangle CornerRadius="10" />
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="BandLabelStyle" TargetType="Label">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+            </Style>
+
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}"
+                 Command="{Binding RefreshCommand}">
+
+        <ScrollView>
+            <VerticalStackLayout Padding="18,22,18,32" Spacing="20">
+
+                <!-- ============ Header ============ -->
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Margin="2,0">
+                    <Label Text="Alerta Rio"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="15"
+                           TextColor="{StaticResource TextPrimary}"
+                           VerticalOptions="End" />
+
+                    <!-- The old "atualizado às" line lives on here, demoted under the location. -->
+                    <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="End">
+                        <Label Text="Blumenau, SC"
+                               FontSize="11"
+                               TextColor="{StaticResource TextNeutral400}"
+                               HorizontalTextAlignment="End" />
+                        <Label Text="{Binding LastUpdatedLabel}"
+                               FontSize="10"
+                               TextColor="{StaticResource TextNeutral500}"
+                               HorizontalTextAlignment="End" />
+                    </VerticalStackLayout>
+
+                    <ActivityIndicator Grid.Column="2"
+                                       IsRunning="{Binding IsInitialLoading}"
+                                       IsVisible="{Binding IsInitialLoading}"
+                                       HeightRequest="16"
+                                       WidthRequest="16"
+                                       VerticalOptions="End" />
+                </Grid>
+
+                <Label Text="{Binding GlobalError}"
+                       IsVisible="{Binding HasGlobalError}"
+                       Style="{StaticResource ErrorTextStyle}"
+                       Margin="2,0" />
+
+                <!-- ============ 1. Current conditions (hero) ============ -->
+                <Border Style="{StaticResource CardStyle}">
+                    <VerticalStackLayout Spacing="12">
+
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="12"
+                              IsVisible="{Binding HasHero}">
+
+                            <Path Style="{StaticResource HeroIconStyle}" VerticalOptions="Start" Margin="0,6,0,0">
+                                <Path.Triggers>
+                                    <DataTrigger TargetType="Path"
+                                                 Binding="{Binding HeroIconKey}"
+                                                 Value="{x:Static models:WeatherIconKey.Rain}">
+                                        <Setter Property="Data" Value="{StaticResource IconRain}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Path"
+                                                 Binding="{Binding HeroIconKey}"
+                                                 Value="{x:Static models:WeatherIconKey.Sun}">
+                                        <Setter Property="Data" Value="{StaticResource IconSun}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Path"
+                                                 Binding="{Binding HeroIconKey}"
+                                                 Value="{x:Static models:WeatherIconKey.CloudSun}">
+                                        <Setter Property="Data" Value="{StaticResource IconCloudSun}" />
+                                    </DataTrigger>
+                                </Path.Triggers>
+                            </Path>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label Text="{Binding HeroTemperatureDisplay}"
+                                       Style="{StaticResource HeadlineStyle}" />
+                                <Label Text="{Binding HeroFeelsLikeDisplay, StringFormat='Sensação térmica: {0}'}"
+                                       Style="{StaticResource BodyTextStyle}" />
+                            </VerticalStackLayout>
+
+                            <Border Grid.Column="2" Style="{StaticResource TagStyle}" VerticalOptions="Start">
+                                <Label Text="{Binding HeroDateBadge}" Style="{StaticResource TagTextStyle}" />
+                            </Border>
+                        </Grid>
+
+                        <HorizontalStackLayout Spacing="16" IsVisible="{Binding HasHero}">
+                            <Label Text="{Binding HeroMaxDisplay, StringFormat='Máx: {0}'}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextNeutral300}" />
+                            <Label Text="{Binding HeroMinDisplay, StringFormat='Mín: {0}'}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextNeutral300}" />
+                            <Label Text="{Binding HeroHumidityDisplay, StringFormat='Umidade: {0}'}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextNeutral300}" />
+                        </HorizontalStackLayout>
+
+                        <Label Text="{Binding WeatherError}"
+                               IsVisible="{Binding HasWeatherError}"
+                               Style="{StaticResource ErrorTextStyle}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ============ 2. 5-day forecast strip ============ -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="Previsão 5 dias"
+                           TextTransform="Uppercase"
+                           Style="{StaticResource SectionTitleStyle}" />
+
+                    <!--
+                        A vertical grid with Span=5 rather than a horizontal list: the handoff
+                        wants five equal-width chips filling the row (flex:1), which a horizontal
+                        LinearItemsLayout cannot express without hard-coding a width.
+                    -->
+                    <CollectionView ItemsSource="{Binding ForecastDays}"
+                                    IsVisible="{Binding HasForecast}"
+                                    SelectionMode="None"
+                                    HeightRequest="92"
+                                    VerticalScrollBarVisibility="Never">
+                        <CollectionView.ItemsLayout>
+                            <GridItemsLayout Orientation="Vertical"
+                                             Span="5"
+                                             HorizontalItemSpacing="6"
+                                             VerticalItemSpacing="6" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ForecastDayViewModel">
+                                <Border Style="{StaticResource DayChipStyle}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border"
+                                                     Binding="{Binding IsSelected}"
+                                                     Value="True">
+                                            <Setter Property="BackgroundColor" Value="{StaticResource AccentWash14}" />
+                                            <Setter Property="Stroke" Value="{StaticResource AccentStrongBrush}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                                    </Border.GestureRecognizers>
+
+                                    <VerticalStackLayout Spacing="6">
+                                        <Label Text="{Binding DayLabel}"
+                                               FontFamily="OpenSansSemibold"
+                                               FontSize="11"
+                                               TextColor="{StaticResource TextNeutral300}"
+                                               HorizontalOptions="Center" />
+
+                                        <Path Style="{StaticResource IconStyle}">
+                                            <Path.Triggers>
+                                                <DataTrigger TargetType="Path"
+                                                             Binding="{Binding IconKey}"
+                                                             Value="{x:Static models:WeatherIconKey.Rain}">
+                                                    <Setter Property="Data" Value="{StaticResource IconRain}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Path"
+                                                             Binding="{Binding IconKey}"
+                                                             Value="{x:Static models:WeatherIconKey.Sun}">
+                                                    <Setter Property="Data" Value="{StaticResource IconSun}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Path"
+                                                             Binding="{Binding IconKey}"
+                                                             Value="{x:Static models:WeatherIconKey.CloudSun}">
+                                                    <Setter Property="Data" Value="{StaticResource IconCloudSun}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Path"
+                                                             Binding="{Binding IsSelected}"
+                                                             Value="True">
+                                                    <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+                                                </DataTrigger>
+                                            </Path.Triggers>
+                                        </Path>
+
+                                        <Label Text="{Binding TemperatureLabel}"
+                                               FontFamily="OpenSansSemibold"
+                                               FontSize="13"
+                                               TextColor="{StaticResource TextPrimary}"
+                                               HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="{Binding ForecastError}"
+                           IsVisible="{Binding HasForecastError}"
+                           Style="{StaticResource ErrorTextStyle}"
+                           Margin="2,0,0,0" />
+                </VerticalStackLayout>
+
+                <!-- ============ 3. River level ============ -->
+                <Border Style="{StaticResource CardStyle}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleRiverCommand}" />
+                    </Border.GestureRecognizers>
+
+                    <VerticalStackLayout Spacing="12">
+
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                            <Label Text="Nível do rio — Ponte Itajaí-Açu"
+                                   TextTransform="Uppercase"
+                                   Style="{StaticResource CardKickerStyle}" />
+                            <Label Grid.Column="1"
+                                   Text="{Binding River.TimeDisplay}"
+                                   IsVisible="{Binding HasRiver}"
+                                   Style="{StaticResource MetaTextStyle}" />
+                            <Path Grid.Column="2"
+                                  x:Name="RiverChevron"
+                                  Style="{StaticResource ChevronStyle}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="16"
+                              IsVisible="{Binding HasRiver}">
+                            <Path Style="{StaticResource TrendIconStyle}">
+                                <Path.Triggers>
+                                    <DataTrigger TargetType="Path"
+                                                 Binding="{Binding RiverTrend}"
+                                                 Value="{x:Static models:RiverTrend.Rising}">
+                                        <Setter Property="Data" Value="{StaticResource IconUp}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Path"
+                                                 Binding="{Binding RiverTrend}"
+                                                 Value="{x:Static models:RiverTrend.Falling}">
+                                        <Setter Property="Data" Value="{StaticResource IconDown}" />
+                                    </DataTrigger>
+                                </Path.Triggers>
+                            </Path>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="{Binding River.LevelHeadline}"
+                                       Style="{StaticResource SubHeadlineStyle}" />
+                                <Label Text="{Binding River.TrendTitle}"
+                                       FontSize="12"
+                                       TextColor="{StaticResource AccentSoft}" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Official bands, revealed on tap. -->
+                        <VerticalStackLayout x:Name="RiverBands"
+                                             Spacing="6"
+                                             Opacity="0"
+                                             IsVisible="{Binding IsRiverExpanded}">
+                            <VerticalStackLayout Spacing="6"
+                                                 BindableLayout.ItemsSource="{Binding RiverThresholds}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RiverThreshold">
+                                        <Border Style="{StaticResource BandRowStyle}">
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border"
+                                                             Binding="{Binding IsCurrent}"
+                                                             Value="True">
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource AccentWash10}" />
+                                                    <Setter Property="Stroke" Value="{StaticResource AccentStrongBrush}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <Label Text="{Binding Label}" Style="{StaticResource BandLabelStyle}" />
+                                                <Label Grid.Column="1"
+                                                       Text="{Binding RangeDisplay}"
+                                                       Style="{StaticResource BodyTextStyle}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <Label Text="{Binding RiverThresholdsError}"
+                                   IsVisible="{Binding HasRiverThresholdsError}"
+                                   Style="{StaticResource ErrorTextStyle}" />
+                        </VerticalStackLayout>
+
+                        <Label Text="{Binding RiverError}"
+                               IsVisible="{Binding HasRiverError}"
+                               Style="{StaticResource ErrorTextStyle}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ============ 4. Dams ============ -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="Barragens de contenção"
+                           TextTransform="Uppercase"
+                           Style="{StaticResource SectionTitleStyle}" />
+
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Dams}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DamCardViewModel">
+                                <Border Style="{StaticResource OutlinedCardStyle}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleCommand}" />
+                                    </Border.GestureRecognizers>
+
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <Label Text="{Binding Data.Estacao}"
+                                                   FontFamily="OpenSansSemibold"
+                                                   FontSize="13"
+                                                   TextColor="{StaticResource TextPrimary}"
+                                                   VerticalTextAlignment="Center" />
+
+                                            <!-- Accent-tinted only when floodgates are open. -->
+                                            <Border Grid.Column="1" Style="{StaticResource TagStyle}">
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border"
+                                                                 Binding="{Binding Data.IsAlert}"
+                                                                 Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{StaticResource TagAccentBg}" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Label Text="{Binding Data.StatusLabel}"
+                                                       Style="{StaticResource TagTextStyle}" />
+                                            </Border>
+                                        </Grid>
+
+                                        <Border HeightRequest="6"
+                                                Padding="0"
+                                                StrokeThickness="0"
+                                                BackgroundColor="{StaticResource Outline}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="3" />
+                                            </Border.StrokeShape>
+                                            <ProgressBar Progress="{Binding Data.CapacityFraction}"
+                                                         HeightRequest="6"
+                                                         BackgroundColor="Transparent" />
+                                        </Border>
+
+                                        <Label Text="{Binding Data.DetailDisplay}"
+                                               IsVisible="{Binding IsExpanded}"
+                                               Style="{StaticResource BodyTextStyle}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Label Text="{Binding BarragensError}"
+                           IsVisible="{Binding HasBarragensError}"
+                           Style="{StaticResource ErrorTextStyle}"
+                           Margin="2,0,0,0" />
+                </VerticalStackLayout>
+
+                <!-- ============ 5. Cotas de enchente (kept from the previous build) ============ -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="Cotas de enchente"
+                           TextTransform="Uppercase"
+                           Style="{StaticResource SectionTitleStyle}" />
+
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="10">
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Nível em que cada rua começa a alagar"
+                                       Style="{StaticResource BodyTextStyle}"
+                                       VerticalTextAlignment="Center" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding CotasCountLabel}"
+                                       Style="{StaticResource MetaTextStyle}" />
+                            </Grid>
+
+                            <SearchBar Text="{Binding CotaSearch}"
+                                       IsVisible="{Binding HasAnyCotas}"
+                                       Placeholder="Buscar rua ou bairro"
+                                       HeightRequest="44"
+                                       Margin="-6,0" />
+
+                            <CollectionView ItemsSource="{Binding Cotas}"
+                                            IsVisible="{Binding HasCotas}"
+                                            HeightRequest="320">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:CotaEnchente">
+                                        <Grid ColumnDefinitions="*,Auto" Padding="0,9" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="1">
+                                                <Label Text="{Binding Logradouro}"
+                                                       FontSize="13"
+                                                       TextColor="{StaticResource TextPrimary}" />
+                                                <Label Text="{Binding Bairro}"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource TextNeutral400}" />
+                                                <Label Text="{Binding Observacao}"
+                                                       IsVisible="{Binding HasObservacao}"
+                                                       FontSize="10"
+                                                       MaxLines="2"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{StaticResource TextNeutral500}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding CotaDisplay}"
+                                                   FontFamily="OpenSansSemibold"
+                                                   FontSize="13"
+                                                   VerticalTextAlignment="Center"
+                                                   TextColor="{StaticResource AccentSoft}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <Label Text="Nenhuma rua encontrada."
+                                   IsVisible="{Binding HasNoCotaMatch}"
+                                   Style="{StaticResource BodyTextStyle}" />
+
+                            <Label Text="{Binding CotasError}"
+                                   IsVisible="{Binding HasCotasError}"
+                                   Style="{StaticResource ErrorTextStyle}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <Label Text="Fonte: Defesa Civil de Blumenau · sensação térmica e umidade via Open-Meteo"
+                       FontSize="10"
+                       Margin="4,0"
+                       HorizontalTextAlignment="Center"
+                       TextColor="{StaticResource TextNeutral500}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+
+</ContentPage>

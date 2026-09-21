@@ -1,0 +1,15 @@
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+
+# Claude Code project settings (not shared)
+.claude/
+
+# OS cruft
+.DS_Store
+Thumbs.db
