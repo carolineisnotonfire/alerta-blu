@@ -420,12 +420,12 @@
                                             <Border Grid.Column="1" Style="{StaticResource TagStyle}">
                                                 <Border.Triggers>
                                                     <DataTrigger TargetType="Border"
-                                                                 Binding="{Binding Data.IsAlert}"
+                                                                 Binding="{Binding IsAlert}"
                                                                  Value="True">
                                                         <Setter Property="BackgroundColor" Value="{StaticResource TagAccentBg}" />
                                                     </DataTrigger>
                                                 </Border.Triggers>
-                                                <Label Text="{Binding Data.StatusLabel}"
+                                                <Label Text="{Binding StatusLabel}"
                                                        Style="{StaticResource TagTextStyle}" />
                                             </Border>
                                         </Grid>
@@ -437,12 +437,12 @@
                                             <Border.StrokeShape>
                                                 <RoundRectangle CornerRadius="3" />
                                             </Border.StrokeShape>
-                                            <ProgressBar Progress="{Binding Data.CapacityFraction}"
+                                            <ProgressBar Progress="{Binding CapacityFraction}"
                                                          HeightRequest="6"
                                                          BackgroundColor="Transparent" />
                                         </Border>
 
-                                        <Label Text="{Binding Data.DetailDisplay}"
+                                        <Label Text="{Binding DetailDisplay}"
                                                IsVisible="{Binding IsExpanded}"
                                                Style="{StaticResource BodyTextStyle}" />
                                     </VerticalStackLayout>

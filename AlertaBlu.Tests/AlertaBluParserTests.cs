@@ -468,7 +468,6 @@ public class AlertaBluParserTests
         // Assert
         Assert.Equal(17.30, barragem.CapacityPercent!.Value, precision: 2);
         Assert.Equal(new DateTime(2026, 8, 13, 8, 0, 0), barragem.ReadingTime);
-        Assert.Equal(0.173, barragem.CapacityFraction, precision: 3);
     }
 
     [Fact]
