@@ -1,24 +1,12 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AlertaBlu.Application;
 using AlertaBlu.Domain;
 using AlertaBlu.Domain.Common;
 using HtmlAgilityPack;
 
 namespace AlertaBlu.Infrastructure;
-
-/// <summary>Latest temperature reading from the AlertaBLU station feed.</summary>
-/// <remarks>Reference types so they can flow through <see cref="SectionResult{T}"/>.</remarks>
-public sealed record TemperatureReading(double ValueC, DateTimeOffset TimeLocal);
-
-/// <summary>Today's forecast minimum/maximum scraped from the "detalhada" page.</summary>
-public sealed record DayExtremes(double? MinC, double? MaxC);
-
-/// <summary>Sensação térmica and humidity from Open-Meteo.</summary>
-public sealed record ApparentConditions(double? FeelsLikeC, int? HumidityPercent);
-
-/// <summary>Forecast sensação térmica and humidity for one future day, from Open-Meteo.</summary>
-public sealed record DailyConditions(DateOnly Date, double? FeelsLikeC, int? HumidityPercent);
 
 /// <summary>
 /// Pure parsing of the AlertaBLU payloads. Deliberately free of <see cref="HttpClient"/> and of
@@ -195,47 +183,6 @@ public static partial class AlertaBluParser
         }
 
         return thresholds;
-    }
-
-    /// <summary>
-    /// Flags the band holding <paramref name="level"/>, for the highlighted row in the expanded
-    /// river card. Returns the bands untouched when there is no reading to place.
-    /// </summary>
-    /// <remarks>
-    /// A reading below the lowest published band (the feed starts at 0 m, but a negative or
-    /// re-baselined reading is possible) highlights the lowest band rather than nothing at all.
-    /// </remarks>
-    public static IReadOnlyList<RiverThreshold> HighlightCurrent(
-        IReadOnlyList<RiverThreshold> thresholds,
-        double? level)
-    {
-        if (level is not { } meters || thresholds.Count == 0)
-        {
-            return thresholds;
-        }
-
-        var currentIndex = -1;
-        for (var i = 0; i < thresholds.Count; i++)
-        {
-            if (thresholds[i].Contains(meters))
-            {
-                currentIndex = i;
-                break;
-            }
-        }
-
-        if (currentIndex < 0)
-        {
-            currentIndex = 0;
-        }
-
-        var flagged = new RiverThreshold[thresholds.Count];
-        for (var i = 0; i < thresholds.Count; i++)
-        {
-            flagged[i] = thresholds[i] with { IsCurrent = i == currentIndex };
-        }
-
-        return flagged;
     }
 
     #endregion

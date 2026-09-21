@@ -13,10 +13,11 @@ public static class ServiceCollectionExtensions
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
 
     /// <summary>
-    /// Registers <see cref="IAlertaBluService"/> behind a resilient <see cref="HttpClient"/>: two
+    /// Registers <see cref="IAlertaBluGateway"/> behind a resilient <see cref="HttpClient"/>: two
     /// retries with jitter, a circuit breaker and a per-try timeout, since every call here is an
     /// idempotent GET against a live third-party site that occasionally drops a request. Also
-    /// registers the offline cache backing it, a file under <paramref name="cacheDirectory"/>.
+    /// registers the offline cache and clock backing <see cref="LoadDashboardUseCase"/>, and the
+    /// use case itself.
     /// </summary>
     /// <param name="cacheDirectory">
     /// A writable, app-private directory (e.g. MAUI's <c>FileSystem.AppDataDirectory</c>). This
@@ -25,11 +26,13 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAlertaBluInfrastructure(
         this IServiceCollection services, string cacheDirectory)
     {
+        services.AddSingleton<IClock, SystemClock>();
+
         services.AddSingleton<IDashboardCache>(provider => new FileDashboardCache(
             Path.Combine(cacheDirectory, "dashboard-cache.json"),
             provider.GetRequiredService<ILogger<FileDashboardCache>>()));
 
-        services.AddHttpClient<IAlertaBluService, AlertaBluService>(client =>
+        services.AddHttpClient<IAlertaBluGateway, AlertaBluService>(client =>
             {
                 client.Timeout = RequestTimeout;
                 client.DefaultRequestHeaders.UserAgent.Add(
@@ -43,6 +46,8 @@ public static class ServiceCollectionExtensions
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Brotli,
             })
             .AddStandardResilienceHandler();
+
+        services.AddSingleton<LoadDashboardUseCase>();
 
         return services;
     }

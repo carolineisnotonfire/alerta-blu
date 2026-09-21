@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<!--
-		Infrastructure layer: the outbound adapters — HTTP endpoints, HTML/JSON parsing, and the
-		IAlertaBluService implementation that composes them. Every third-party dependency the app
-		has on the Civil Defense site's wire formats (HtmlAgilityPack, System.Text.Json) is
-		confined here; it is deliberately free of MAUI types so it stays a plain net10.0 library
-		that the test project can reference directly.
+		Infrastructure layer: the outbound adapters — HTTP endpoints, HTML/JSON parsing, the
+		IAlertaBluGateway implementation that fetches and parses them (no cross-section
+		composition; that's AlertaBlu.Application's LoadDashboardUseCase), and the file-backed
+		offline cache. Every third-party dependency the app has on the Civil Defense site's wire
+		formats (HtmlAgilityPack, System.Text.Json) is confined here; it is deliberately free of
+		MAUI types so it stays a plain net10.0 library that the test project can reference directly.
 	-->
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>

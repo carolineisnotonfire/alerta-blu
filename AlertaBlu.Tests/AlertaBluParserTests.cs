@@ -132,7 +132,7 @@ public class AlertaBluParserTests
         var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
 
         // Act: a re-baselined or negative reading, below the lowest band's 0m start.
-        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: -0.5);
+        var flagged = RiverThreshold.HighlightCurrent(thresholds, level: -0.5);
 
         // Assert
         Assert.True(flagged[0].IsCurrent);
@@ -146,7 +146,7 @@ public class AlertaBluParserTests
         var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
 
         // Act: exactly 3,0m is where "Atenção" starts, so it must not stay in "Normalidade".
-        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: 3.0);
+        var flagged = RiverThreshold.HighlightCurrent(thresholds, level: 3.0);
 
         // Assert
         Assert.False(flagged[0].IsCurrent);
@@ -160,7 +160,7 @@ public class AlertaBluParserTests
         var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
 
         // Act: the highest band ("Alerta") is open-ended.
-        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: 10.0);
+        var flagged = RiverThreshold.HighlightCurrent(thresholds, level: 10.0);
 
         // Assert
         Assert.True(flagged[2].IsCurrent);
@@ -174,7 +174,7 @@ public class AlertaBluParserTests
         var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
 
         // Act
-        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: null);
+        var flagged = RiverThreshold.HighlightCurrent(thresholds, level: null);
 
         // Assert
         Assert.All(flagged, b => Assert.False(b.IsCurrent));

@@ -36,4 +36,45 @@ public sealed record RiverThreshold
     /// <summary>Whether a reading falls in this band; the upper bound is exclusive.</summary>
     public bool Contains(double level) =>
         level >= MinMeters && (MaxMeters is not { } max || level < max);
+
+    /// <summary>
+    /// Flags the band holding <paramref name="level"/>, for the highlighted row in the expanded
+    /// river card. Returns the bands untouched when there is no reading to place.
+    /// </summary>
+    /// <remarks>
+    /// A reading below the lowest published band (the feed starts at 0 m, but a negative or
+    /// re-baselined reading is possible) highlights the lowest band rather than nothing at all.
+    /// </remarks>
+    public static IReadOnlyList<RiverThreshold> HighlightCurrent(
+        IReadOnlyList<RiverThreshold> thresholds,
+        double? level)
+    {
+        if (level is not { } meters || thresholds.Count == 0)
+        {
+            return thresholds;
+        }
+
+        var currentIndex = -1;
+        for (var i = 0; i < thresholds.Count; i++)
+        {
+            if (thresholds[i].Contains(meters))
+            {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex < 0)
+        {
+            currentIndex = 0;
+        }
+
+        var flagged = new RiverThreshold[thresholds.Count];
+        for (var i = 0; i < thresholds.Count; i++)
+        {
+            flagged[i] = thresholds[i] with { IsCurrent = i == currentIndex };
+        }
+
+        return flagged;
+    }
 }
