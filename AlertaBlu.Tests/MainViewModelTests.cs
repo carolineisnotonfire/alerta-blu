@@ -225,6 +225,63 @@ public class MainViewModelTests
 
     #endregion
 
+    #region Change notification
+
+    [Fact]
+    public async Task LoadAsync_Should_RaisePropertyChanged_ForARepresentativePropertyOfEachSection()
+    {
+        // Arrange
+        var viewModel = CreateViewModel();
+        var raised = new HashSet<string>();
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is { } name)
+            {
+                raised.Add(name);
+            }
+        };
+
+        // Act
+        await viewModel.LoadAsync();
+
+        // Assert: one property per section, plus a hero-card property that depends on two of
+        // them, plus the page-level fields set outside any single section's Apply method.
+        string[] expected =
+        [
+            nameof(MainViewModel.Weather), nameof(MainViewModel.Forecast), nameof(MainViewModel.River),
+            nameof(MainViewModel.RiverThresholds), nameof(MainViewModel.Cotas), nameof(MainViewModel.Dams),
+            nameof(MainViewModel.HeroTemperatureDisplay), nameof(MainViewModel.LastUpdatedLabel),
+            nameof(MainViewModel.GlobalError), nameof(MainViewModel.IsInitialLoading),
+        ];
+        Assert.All(expected, name => Assert.Contains(name, raised));
+    }
+
+    [Fact]
+    public async Task LoadAsync_Should_RaiseGlobalError_When_TheRefreshItselfThrows()
+    {
+        // Arrange: a gateway whose temperature call throws synchronously inside the use case.
+        var gateway = new FakeAlertaBluGateway { TemperatureGate = Task.FromException(new InvalidOperationException("boom")) };
+        var viewModel = CreateViewModel(gateway);
+        var raised = new HashSet<string>();
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is { } name)
+            {
+                raised.Add(name);
+            }
+        };
+
+        // Act
+        await viewModel.LoadAsync();
+
+        // Assert
+        Assert.True(viewModel.HasGlobalError);
+        Assert.Contains(nameof(MainViewModel.GlobalError), raised);
+        Assert.Contains(nameof(MainViewModel.HasGlobalError), raised);
+    }
+
+    #endregion
+
     #region Re-entrancy guard
 
     [Fact]

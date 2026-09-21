@@ -303,12 +303,14 @@ public sealed class MainViewModel : ObservableBase, IDisposable
         {
             _logger.LogError(ex, "Falha inesperada ao atualizar o painel.");
             GlobalError = "Não foi possível atualizar. Verifique sua conexão e tente novamente.";
+            OnPropertyChanged(nameof(GlobalError));
+            OnPropertyChanged(nameof(HasGlobalError));
         }
         finally
         {
             _isLoading = false;
             IsRefreshing = false;
-            RaiseAllPropertiesChanged();
+            OnPropertyChanged(nameof(IsInitialLoading));
         }
     }
 
@@ -332,42 +334,128 @@ public sealed class MainViewModel : ObservableBase, IDisposable
     /// </summary>
     public void Dispose() => _cancellation?.Dispose();
 
+    /// <summary>
+    /// Applies a freshly loaded snapshot, one section at a time. Each <c>ApplyXxx</c> method sets
+    /// its own fields and raises exactly the notifications that section's bindings depend on,
+    /// right next to where the fields are set - no separate, hand-maintained list of property
+    /// names to keep in sync as sections gain or lose properties.
+    /// </summary>
     private void Apply(DashboardSnapshot snapshot)
     {
         GlobalError = null;
+        OnPropertyChanged(nameof(GlobalError));
+        OnPropertyChanged(nameof(HasGlobalError));
 
-        Weather = snapshot.Weather.Value;
-        WeatherError = snapshot.Weather.Error;
-        WeatherStaleLabel = StaleLabel(snapshot.Weather);
+        ApplyWeather(snapshot.Weather);
+        ApplyForecast(snapshot.Forecast);
+        ApplyRiver(snapshot.River);
+        ApplyRiverThresholds(snapshot.RiverThresholds);
+        ApplyCotas(snapshot.Cotas);
+        ApplyBarragens(snapshot.Barragens);
 
-        Forecast = snapshot.Forecast.Value ?? [];
-        ForecastError = snapshot.Forecast.Error;
-        ForecastStaleLabel = StaleLabel(snapshot.Forecast);
+        LastUpdatedLabel = $"atualizado às {snapshot.LoadedAt:HH:mm}";
+        OnPropertyChanged(nameof(LastUpdatedLabel));
+
+        // Weather and Forecast (today's live reading vs. a future day's forecast) both feed the
+        // hero card, so it is refreshed once here rather than from each of those methods.
+        RaiseHeroPropertiesChanged();
+    }
+
+    private void ApplyWeather(SectionResult<CurrentWeather> weather)
+    {
+        Weather = weather.Value;
+        WeatherError = weather.Error;
+        WeatherStaleLabel = StaleLabel(weather);
+
+        OnPropertyChanged(nameof(Weather));
+        OnPropertyChanged(nameof(HasWeather));
+        OnPropertyChanged(nameof(WeatherError));
+        OnPropertyChanged(nameof(HasWeatherError));
+        OnPropertyChanged(nameof(WeatherStaleLabel));
+        OnPropertyChanged(nameof(HasWeatherStale));
+    }
+
+    private void ApplyForecast(SectionResult<IReadOnlyList<DailyForecast>> forecast)
+    {
+        Forecast = forecast.Value ?? [];
+        ForecastError = forecast.Error;
+        ForecastStaleLabel = StaleLabel(forecast);
         RebuildForecastDays();
 
-        River = snapshot.River.Value;
-        RiverError = snapshot.River.Error;
-        RiverStaleLabel = StaleLabel(snapshot.River);
+        OnPropertyChanged(nameof(Forecast));
+        OnPropertyChanged(nameof(ForecastDays));
+        OnPropertyChanged(nameof(HasForecast));
+        OnPropertyChanged(nameof(ForecastError));
+        OnPropertyChanged(nameof(HasForecastError));
+        OnPropertyChanged(nameof(ForecastStaleLabel));
+        OnPropertyChanged(nameof(HasForecastStale));
+        OnPropertyChanged(nameof(SelectedForecastIndex));
+    }
 
-        RiverThresholds = (snapshot.RiverThresholds.Value ?? [])
+    private void ApplyRiver(SectionResult<RiverLevel> river)
+    {
+        River = river.Value;
+        RiverError = river.Error;
+        RiverStaleLabel = StaleLabel(river);
+
+        OnPropertyChanged(nameof(River));
+        OnPropertyChanged(nameof(HasRiver));
+        OnPropertyChanged(nameof(RiverError));
+        OnPropertyChanged(nameof(HasRiverError));
+        OnPropertyChanged(nameof(RiverTrend));
+        OnPropertyChanged(nameof(RiverStaleLabel));
+        OnPropertyChanged(nameof(HasRiverStale));
+    }
+
+    private void ApplyRiverThresholds(SectionResult<IReadOnlyList<RiverThreshold>> thresholds)
+    {
+        RiverThresholds = (thresholds.Value ?? [])
             .Select(static threshold => new RiverThresholdViewModel(threshold))
             .ToArray();
-        RiverThresholdsError = snapshot.RiverThresholds.Error;
-        RiverThresholdsStaleLabel = StaleLabel(snapshot.RiverThresholds);
+        RiverThresholdsError = thresholds.Error;
+        RiverThresholdsStaleLabel = StaleLabel(thresholds);
 
-        _allCotas = snapshot.Cotas.Value ?? [];
+        OnPropertyChanged(nameof(RiverThresholds));
+        OnPropertyChanged(nameof(HasRiverThresholds));
+        OnPropertyChanged(nameof(RiverThresholdsError));
+        OnPropertyChanged(nameof(HasRiverThresholdsError));
+        OnPropertyChanged(nameof(RiverThresholdsStaleLabel));
+        OnPropertyChanged(nameof(HasRiverThresholdsStale));
+    }
+
+    private void ApplyCotas(SectionResult<IReadOnlyList<CotaEnchente>> cotas)
+    {
+        _allCotas = cotas.Value ?? [];
         _allCotaSearchIndex = _allCotas
             .Select(static cota => $"{cota.Logradouro} {cota.Bairro}".ToLowerInvariant())
             .ToArray();
-        CotasError = snapshot.Cotas.Error;
-        CotasStaleLabel = StaleLabel(snapshot.Cotas);
+        CotasError = cotas.Error;
+        CotasStaleLabel = StaleLabel(cotas);
         ApplyCotaFilter(notify: false);
 
-        Dams = (snapshot.Barragens.Value ?? []).Select(static dam => new DamCardViewModel(dam)).ToArray();
-        BarragensError = snapshot.Barragens.Error;
-        BarragensStaleLabel = StaleLabel(snapshot.Barragens);
+        OnPropertyChanged(nameof(Cotas));
+        OnPropertyChanged(nameof(HasCotas));
+        OnPropertyChanged(nameof(HasAnyCotas));
+        OnPropertyChanged(nameof(HasNoCotaMatch));
+        OnPropertyChanged(nameof(CotasCountLabel));
+        OnPropertyChanged(nameof(CotasError));
+        OnPropertyChanged(nameof(HasCotasError));
+        OnPropertyChanged(nameof(CotasStaleLabel));
+        OnPropertyChanged(nameof(HasCotasStale));
+    }
 
-        LastUpdatedLabel = $"atualizado às {snapshot.LoadedAt:HH:mm}";
+    private void ApplyBarragens(SectionResult<IReadOnlyList<Barragem>> barragens)
+    {
+        Dams = (barragens.Value ?? []).Select(static dam => new DamCardViewModel(dam)).ToArray();
+        BarragensError = barragens.Error;
+        BarragensStaleLabel = StaleLabel(barragens);
+
+        OnPropertyChanged(nameof(Dams));
+        OnPropertyChanged(nameof(HasBarragens));
+        OnPropertyChanged(nameof(BarragensError));
+        OnPropertyChanged(nameof(HasBarragensError));
+        OnPropertyChanged(nameof(BarragensStaleLabel));
+        OnPropertyChanged(nameof(HasBarragensStale));
     }
 
     /// <summary>
@@ -426,54 +514,16 @@ public sealed class MainViewModel : ObservableBase, IDisposable
         }
     }
 
-    /// <summary>Everything the hero card reads, re-raised whenever the selected day changes.</summary>
-    private static readonly string[] HeroProperties =
-    [
-        nameof(HasHero), nameof(HeroIconKey), nameof(HeroDateBadge), nameof(HeroTemperatureDisplay),
-        nameof(HeroFeelsLikeDisplay), nameof(HeroMaxDisplay), nameof(HeroMinDisplay),
-        nameof(HeroHumidityDisplay),
-    ];
-
-    /// <summary>Every property a completed refresh can change.</summary>
-    private static readonly string[] RefreshableProperties =
-    [
-        nameof(Weather), nameof(WeatherError), nameof(HasWeather), nameof(HasWeatherError),
-        nameof(WeatherStaleLabel), nameof(HasWeatherStale),
-        nameof(Forecast), nameof(ForecastDays), nameof(ForecastError), nameof(HasForecast),
-        nameof(HasForecastError), nameof(ForecastStaleLabel), nameof(HasForecastStale),
-        nameof(SelectedForecastIndex),
-        nameof(River), nameof(RiverError), nameof(HasRiver), nameof(HasRiverError), nameof(RiverTrend),
-        nameof(RiverStaleLabel), nameof(HasRiverStale),
-        nameof(RiverThresholds), nameof(RiverThresholdsError), nameof(HasRiverThresholds),
-        nameof(HasRiverThresholdsError), nameof(RiverThresholdsStaleLabel), nameof(HasRiverThresholdsStale),
-        nameof(Cotas), nameof(CotasError), nameof(HasCotas), nameof(HasCotasError),
-        nameof(HasAnyCotas), nameof(HasNoCotaMatch), nameof(CotasCountLabel),
-        nameof(CotasStaleLabel), nameof(HasCotasStale),
-        nameof(Dams), nameof(BarragensError), nameof(HasBarragens), nameof(HasBarragensError),
-        nameof(BarragensStaleLabel), nameof(HasBarragensStale),
-        nameof(GlobalError), nameof(HasGlobalError), nameof(LastUpdatedLabel), nameof(IsInitialLoading),
-    ];
-
+    /// <summary>Everything the hero card reads: re-raised after a refresh and whenever the selected day changes.</summary>
     private void RaiseHeroPropertiesChanged()
     {
-        foreach (var property in HeroProperties)
-        {
-            OnPropertyChanged(property);
-        }
-    }
-
-    /// <summary>
-    /// Signals that every binding should re-read after a refresh that touches the whole screen.
-    /// The properties are named explicitly rather than relying on the empty-name "all changed"
-    /// convention, so the refresh does not depend on how the binding engine interprets it.
-    /// </summary>
-    private void RaiseAllPropertiesChanged()
-    {
-        foreach (var property in RefreshableProperties)
-        {
-            OnPropertyChanged(property);
-        }
-
-        RaiseHeroPropertiesChanged();
+        OnPropertyChanged(nameof(HasHero));
+        OnPropertyChanged(nameof(HeroIconKey));
+        OnPropertyChanged(nameof(HeroDateBadge));
+        OnPropertyChanged(nameof(HeroTemperatureDisplay));
+        OnPropertyChanged(nameof(HeroFeelsLikeDisplay));
+        OnPropertyChanged(nameof(HeroMaxDisplay));
+        OnPropertyChanged(nameof(HeroMinDisplay));
+        OnPropertyChanged(nameof(HeroHumidityDisplay));
     }
 }
