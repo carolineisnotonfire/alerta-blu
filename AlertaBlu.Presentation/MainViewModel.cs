@@ -10,7 +10,7 @@ namespace AlertaBlu.ViewModels;
 /// (via <see cref="ObservableBase"/>) rather than an MVVM framework: this is a single-page app and
 /// the extra dependency would not earn its keep.
 /// </summary>
-public sealed class MainViewModel : ObservableBase
+public sealed class MainViewModel : ObservableBase, IDisposable
 {
     /// <summary>Ceiling for a whole refresh, so a hung endpoint cannot pin the spinner forever.</summary>
     private static readonly TimeSpan RefreshTimeout = TimeSpan.FromSeconds(45);
@@ -272,6 +272,11 @@ public sealed class MainViewModel : ObservableBase
     {
         if (_isLoading)
         {
+            // RefreshView already flipped IsRefreshing to true via its two-way binding before
+            // invoking this call; since this call isn't the one driving the in-flight load, it
+            // must flip it back itself rather than leaving the pull-to-refresh spinner stuck
+            // until the original call's own finally block gets around to it.
+            IsRefreshing = false;
             return;
         }
 
@@ -316,9 +321,16 @@ public sealed class MainViewModel : ObservableBase
         }
         catch (ObjectDisposedException)
         {
-            // Already torn down; nothing to cancel.
+            // Disposed by a concurrent LoadAsync() swapping in a new CTS; nothing to cancel.
         }
     }
+
+    /// <summary>
+    /// Disposes the current <see cref="CancellationTokenSource"/>, if any. <see cref="LoadAsync"/>
+    /// disposes every previous one as it swaps in a new one, but the final one it creates is only
+    /// ever cleaned up here, when this (singleton-lifetime) view model itself is torn down.
+    /// </summary>
+    public void Dispose() => _cancellation?.Dispose();
 
     private void Apply(DashboardSnapshot snapshot)
     {

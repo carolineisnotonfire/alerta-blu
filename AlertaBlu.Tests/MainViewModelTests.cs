@@ -251,6 +251,32 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task LoadAsync_Should_ResetIsRefreshing_When_AnOverlappingCallIsIgnored()
+    {
+        // Arrange: the first call is held open on the temperature fetch.
+        var gate = new TaskCompletionSource();
+        var gateway = new FakeAlertaBluGateway { TemperatureGate = gate.Task };
+        var viewModel = CreateViewModel(gateway);
+        var first = viewModel.LoadAsync();
+
+        // RefreshView's two-way binding flips IsRefreshing to true as soon as the user pulls,
+        // before the command (and therefore this second LoadAsync call) even runs.
+        viewModel.IsRefreshing = true;
+
+        // Act
+        var second = viewModel.LoadAsync();
+
+        // Assert: the guard resets the flag it did not set, so the pull-to-refresh spinner does
+        // not stay stuck until the original call eventually finishes.
+        Assert.True(second.IsCompleted);
+        Assert.False(viewModel.IsRefreshing);
+
+        // Cleanup
+        gate.SetResult();
+        await first;
+    }
+
+    [Fact]
     public async Task LoadAsync_Should_AcceptANewCall_Once_ThePreviousRefreshHasFinished()
     {
         // Arrange
