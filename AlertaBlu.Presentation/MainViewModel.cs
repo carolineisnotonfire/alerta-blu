@@ -16,6 +16,7 @@ public sealed class MainViewModel : ObservableBase
     private static readonly TimeSpan RefreshTimeout = TimeSpan.FromSeconds(45);
 
     private readonly LoadDashboardUseCase _loadDashboard;
+    private readonly IClock _clock;
     private readonly ILogger<MainViewModel> _logger;
 
     private CancellationTokenSource? _cancellation;
@@ -27,9 +28,19 @@ public sealed class MainViewModel : ObservableBase
     private string _cotaSearch = string.Empty;
     private IReadOnlyList<CotaEnchente> _allCotas = [];
 
-    public MainViewModel(LoadDashboardUseCase loadDashboard, ILogger<MainViewModel> logger)
+    /// <summary>
+    /// Lowercase "street neighbourhood" haystack per row in <see cref="_allCotas"/>, same index,
+    /// computed once per load rather than once per keystroke (the table carries ~1900 rows). Kept
+    /// here rather than on <see cref="CotaEnchente"/> itself: a lazily-computed field on a record
+    /// breaks its synthesized value equality, since C# generates <c>Equals</c>/<c>GetHashCode</c>
+    /// over every field, mutable ones included.
+    /// </summary>
+    private string[] _allCotaSearchIndex = [];
+
+    public MainViewModel(LoadDashboardUseCase loadDashboard, IClock clock, ILogger<MainViewModel> logger)
     {
         _loadDashboard = loadDashboard;
+        _clock = clock;
         _logger = logger;
         RefreshCommand = new RelayCommand(async () => await LoadAsync().ConfigureAwait(false));
         ToggleRiverCommand = new RelayCommand(() => IsRiverExpanded = !IsRiverExpanded);
@@ -157,7 +168,7 @@ public sealed class MainViewModel : ObservableBase
     public WeatherIconKey HeroIconKey => SelectedDay?.IconKey ?? WeatherIconKey.Cloud;
 
     public string HeroDateBadge =>
-        SelectedDay?.DayLabel ?? Weather?.DateBadge ?? DateTime.Now.ToString("dd/MM");
+        SelectedDay?.DayLabel ?? Weather?.DateBadge ?? _clock.Now.ToString("dd/MM");
 
     /// <summary>
     /// The station reading for today; for a future day there is no measurement, so that day's
@@ -331,6 +342,9 @@ public sealed class MainViewModel : ObservableBase
         RiverThresholdsStaleLabel = StaleLabel(snapshot.RiverThresholds);
 
         _allCotas = snapshot.Cotas.Value ?? [];
+        _allCotaSearchIndex = _allCotas
+            .Select(static cota => $"{cota.Logradouro} {cota.Bairro}".ToLowerInvariant())
+            .ToArray();
         CotasError = snapshot.Cotas.Error;
         CotasStaleLabel = StaleLabel(snapshot.Cotas);
         ApplyCotaFilter(notify: false);
@@ -386,7 +400,7 @@ public sealed class MainViewModel : ObservableBase
         Cotas = needle.Length == 0
             ? _allCotas
             : _allCotas
-                .Where(cota => cota.SearchIndex.Contains(needle, StringComparison.Ordinal))
+                .Where((_, index) => _allCotaSearchIndex[index].Contains(needle, StringComparison.Ordinal))
                 .ToArray();
 
         if (notify)

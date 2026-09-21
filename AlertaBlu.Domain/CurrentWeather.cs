@@ -46,8 +46,12 @@ public sealed record CurrentWeather
 
     public string MinDisplay => MinC is { } value ? $"{PtBr.Format(value, 0)}°C" : "--";
 
-    /// <summary>Date badge shown in the corner of the card, e.g. <c>13/08</c>.</summary>
-    public string DateBadge => (ReadingTimeLocal?.DateTime ?? DateTime.Now).ToString("dd/MM");
+    /// <summary>
+    /// Date badge shown in the corner of the card, e.g. <c>13/08</c>; null when there is no
+    /// reading to date. Falling back to "today" is a presentation policy, not domain data, so
+    /// that decision belongs to the view model (which has an injected clock), not here.
+    /// </summary>
+    public string? DateBadge => ReadingTimeLocal?.DateTime.ToString("dd/MM");
 
     /// <summary>Time of the station reading, e.g. <c>08:00</c>.</summary>
     public string ReadingTimeDisplay =>

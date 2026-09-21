@@ -53,6 +53,10 @@ public sealed record DashboardSnapshot
 
     public SectionResult<IReadOnlyList<Barragem>> Barragens { get; init; }
 
-    /// <summary>When the snapshot was assembled, for the "atualizado às" label.</summary>
-    public DateTimeOffset LoadedAt { get; init; } = DateTimeOffset.Now;
+    /// <summary>
+    /// When the snapshot was assembled, for the "atualizado às" label. No ambient-clock default:
+    /// the use case that builds this always sets it explicitly from its injected clock, so the
+    /// value stays deterministic and testable.
+    /// </summary>
+    public DateTimeOffset LoadedAt { get; init; }
 }

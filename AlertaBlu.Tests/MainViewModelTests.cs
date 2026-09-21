@@ -18,9 +18,9 @@ public class MainViewModelTests
     private static MainViewModel CreateViewModel(
         FakeAlertaBluGateway? gateway = null, FakeDashboardCache? cache = null, FakeClock? clock = null)
     {
-        var useCase = new LoadDashboardUseCase(
-            gateway ?? new FakeAlertaBluGateway(), cache ?? new FakeDashboardCache(), clock ?? new FakeClock());
-        return new MainViewModel(useCase, NullLogger<MainViewModel>.Instance);
+        clock ??= new FakeClock();
+        var useCase = new LoadDashboardUseCase(gateway ?? new FakeAlertaBluGateway(), cache ?? new FakeDashboardCache(), clock);
+        return new MainViewModel(useCase, clock, NullLogger<MainViewModel>.Instance);
     }
 
     #region Hero card fallback
