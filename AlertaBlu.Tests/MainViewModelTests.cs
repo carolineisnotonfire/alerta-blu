@@ -185,6 +185,7 @@ public class MainViewModelTests
 
         // Act
         viewModel.CotaSearch = "ITOUPAVA";
+        await viewModel.CotaFilterSettled;
 
         // Assert
         Assert.Equal(2, viewModel.Cotas.Count);
@@ -200,6 +201,7 @@ public class MainViewModelTests
 
         // Act
         viewModel.CotaSearch = "rua que nao existe";
+        await viewModel.CotaFilterSettled;
 
         // Assert: the table did load — it's the filter that found nothing.
         Assert.True(viewModel.HasAnyCotas);
@@ -214,13 +216,32 @@ public class MainViewModelTests
         var viewModel = CreateViewModel(GatewayWithThreeCotas());
         await viewModel.LoadAsync();
         viewModel.CotaSearch = "Centro";
+        await viewModel.CotaFilterSettled;
 
         // Act
         viewModel.CotaSearch = string.Empty;
+        await viewModel.CotaFilterSettled;
 
         // Assert
         Assert.Equal(3, viewModel.Cotas.Count);
         Assert.Equal("3 ruas", viewModel.CotasCountLabel);
+    }
+
+    [Fact]
+    public async Task CotaSearch_Should_IgnoreASupersededKeystroke_And_OnlyApplyTheLatest()
+    {
+        // Arrange
+        var viewModel = CreateViewModel(GatewayWithThreeCotas());
+        await viewModel.LoadAsync();
+
+        // Act: two keystrokes in quick succession, as if typed - the first debounce is cancelled.
+        viewModel.CotaSearch = "Itoupava Norte";
+        viewModel.CotaSearch = "Centro";
+        await viewModel.CotaFilterSettled;
+
+        // Assert: only the final search actually ran.
+        var match = Assert.Single(viewModel.Cotas);
+        Assert.Equal("Avenida Beira Rio", match.Logradouro);
     }
 
     #endregion

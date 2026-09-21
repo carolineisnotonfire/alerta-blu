@@ -34,6 +34,7 @@ public sealed class MainViewModel : ObservableBase, IDisposable
     /// over every field, mutable ones included.
     /// </summary>
     private string[] _allCotaSearchIndex = [];
+    private CancellationTokenSource? _cotaFilterDebounceCancellation;
 
     public MainViewModel(
         LoadDashboardUseCase loadDashboard, IClock clock, AlertaBluOptions options, ILogger<MainViewModel> logger)
@@ -257,10 +258,17 @@ public sealed class MainViewModel : ObservableBase, IDisposable
         {
             if (SetProperty(ref _cotaSearch, value))
             {
-                ApplyCotaFilter();
+                DebounceCotaFilter();
             }
         }
     }
+
+    /// <summary>
+    /// Completes once the debounced filter triggered by the most recent <see cref="CotaSearch"/>
+    /// change has actually run. Exposed mainly so tests can await it deterministically instead of
+    /// sleeping past the debounce window.
+    /// </summary>
+    public Task CotaFilterSettled { get; private set; } = Task.CompletedTask;
 
     #endregion
 
@@ -332,7 +340,11 @@ public sealed class MainViewModel : ObservableBase, IDisposable
     /// disposes every previous one as it swaps in a new one, but the final one it creates is only
     /// ever cleaned up here, when this (singleton-lifetime) view model itself is torn down.
     /// </summary>
-    public void Dispose() => _cancellation?.Dispose();
+    public void Dispose()
+    {
+        _cancellation?.Dispose();
+        _cotaFilterDebounceCancellation?.Dispose();
+    }
 
     /// <summary>
     /// Applies a freshly loaded snapshot, one section at a time. Each <c>ApplyXxx</c> method sets
@@ -489,6 +501,40 @@ public sealed class MainViewModel : ObservableBase, IDisposable
         {
             day.IsSelected = day.Index == _selectedForecastIndex;
         }
+    }
+
+    /// <summary>Idle time after the last keystroke before the filter actually runs.</summary>
+    private static readonly TimeSpan CotaFilterDebounce = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// Delays <see cref="ApplyCotaFilter"/> until typing pauses, so the ~1900-row scan runs once
+    /// per pause instead of once per keystroke. A new keystroke cancels whatever debounce was
+    /// already pending.
+    /// </summary>
+    private void DebounceCotaFilter()
+    {
+        _cotaFilterDebounceCancellation?.Cancel();
+        _cotaFilterDebounceCancellation?.Dispose();
+
+        var cancellation = new CancellationTokenSource();
+        _cotaFilterDebounceCancellation = cancellation;
+
+        CotaFilterSettled = RunDebouncedFilterAsync(cancellation.Token);
+    }
+
+    private async Task RunDebouncedFilterAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(CotaFilterDebounce, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a later keystroke; that call's own debounce will apply the filter.
+            return;
+        }
+
+        ApplyCotaFilter();
     }
 
     /// <summary>
