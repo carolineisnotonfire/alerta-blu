@@ -26,6 +26,7 @@ public class AlertaBluServiceTests
         Assert.True(snapshot.Weather.HasValue);
         Assert.True(snapshot.Forecast.HasValue);
         Assert.True(snapshot.River.HasValue);
+        Assert.True(snapshot.RiverThresholds.HasValue);
         Assert.True(snapshot.Cotas.HasValue);
         Assert.True(snapshot.Barragens.HasValue);
 
@@ -34,6 +35,26 @@ public class AlertaBluServiceTests
         Assert.Equal(14d, snapshot.Weather.Value.MinC);
         Assert.Equal(5, snapshot.Forecast.Value!.Count);
         Assert.Equal(3, snapshot.Barragens.Value!.Count);
+
+        // River level is 2,25m (RiverHtml), which falls in the lowest band (0 – 3,0m).
+        Assert.Equal(3, snapshot.RiverThresholds.Value!.Count);
+        Assert.True(snapshot.RiverThresholds.Value[0].IsCurrent);
+        Assert.Equal("Normalidade", snapshot.RiverThresholds.Value[0].Label);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_AttachFeelsLikeAndHumidity_ToMatchingForecastDay()
+    {
+        // Arrange
+        var service = CreateService(StubHttpMessageHandler.Healthy());
+
+        // Act
+        var snapshot = await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert: the Open-Meteo "daily" block is joined onto the scraped forecast by date.
+        var thursday = snapshot.Forecast.Value!.Single(f => f.Date == new DateOnly(2026, 8, 13));
+        Assert.Equal(23.5, thursday.FeelsLikeC!.Value, precision: 2);
+        Assert.Equal(70, thursday.HumidityPercent);
     }
 
     [Fact]
@@ -138,7 +159,7 @@ public class AlertaBluServiceTests
 
         // Assert
         Assert.Equal(1, handler.RequestedUrls.Count(url => url.Contains("/p/detalhada", StringComparison.Ordinal)));
-        Assert.Equal(6, handler.RequestedUrls.Count);
+        Assert.Equal(7, handler.RequestedUrls.Count);
     }
 
     [Fact]

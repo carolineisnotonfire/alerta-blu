@@ -18,7 +18,20 @@ internal static class Fixtures
     public const string OpenMeteoJson = """
         {"latitude":-26.88928,"longitude":-49.09091,"timezone":"America/Sao_Paulo",
          "current_units":{"relative_humidity_2m":"%","apparent_temperature":"°C"},
-         "current":{"time":"2026-08-13T08:30","interval":900,"relative_humidity_2m":93,"apparent_temperature":16.9}}
+         "current":{"time":"2026-08-13T08:30","interval":900,"relative_humidity_2m":93,"apparent_temperature":16.9},
+         "daily":{
+           "time":["2026-08-13","2026-08-14","2026-08-15","2026-08-16","2026-08-17"],
+           "apparent_temperature_max":[23.5,19.8,null,22.1,21.0],
+           "relative_humidity_2m_mean":[70,75,80,65,68]}}
+        """;
+
+    /// <summary>Official level bands from <c>nivel_oficial.json</c>: three ascending conditions.</summary>
+    public const string NivelOficialJson = """
+        {"condicoes":[
+          {"nivel":0,"condicao":"Normalidade"},
+          {"nivel":3.0,"condicao":"Atenção"},
+          {"nivel":4.5,"condicao":"Alerta"}
+        ]}
         """;
 
     /// <summary>

@@ -65,6 +65,121 @@ public class AlertaBluParserTests
         Assert.Throws<FormatException>(() => AlertaBluParser.ParseApparentConditions("""{"latitude":-26.9}"""));
     }
 
+    [Fact]
+    public void ParseDailyConditions_Should_ReadOneEntry_PerDate()
+    {
+        // Act
+        var daily = AlertaBluParser.ParseDailyConditions(Fixtures.OpenMeteoJson);
+
+        // Assert
+        Assert.Equal(5, daily.Count);
+        var thursday = daily.Single(d => d.Date == new DateOnly(2026, 8, 13));
+        Assert.Equal(23.5, thursday.FeelsLikeC!.Value, precision: 2);
+        Assert.Equal(70, thursday.HumidityPercent);
+    }
+
+    [Fact]
+    public void ParseDailyConditions_Should_LeaveFeelsLikeNull_When_ValueIsMissingFromTheArray()
+    {
+        // Act: 15/08/2026's apparent_temperature_max entry is a JSON null.
+        var daily = AlertaBluParser.ParseDailyConditions(Fixtures.OpenMeteoJson);
+
+        // Assert
+        var saturday = daily.Single(d => d.Date == new DateOnly(2026, 8, 15));
+        Assert.Null(saturday.FeelsLikeC);
+        Assert.Equal(80, saturday.HumidityPercent);
+    }
+
+    [Fact]
+    public void ParseDailyConditions_Should_ReturnEmpty_When_DailyBlockIsAbsent()
+    {
+        // Act
+        var daily = AlertaBluParser.ParseDailyConditions("""{"current":{"apparent_temperature":16.9}}""");
+
+        // Assert
+        Assert.Empty(daily);
+    }
+
+    #endregion
+
+    #region nivel_oficial.json
+
+    [Fact]
+    public void ParseRiverThresholds_Should_BuildAscendingBands_FromConsecutiveLevels()
+    {
+        // Act
+        var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
+
+        // Assert
+        Assert.Equal(3, thresholds.Count);
+        Assert.Equal("Normalidade", thresholds[0].Label);
+        Assert.Equal(0d, thresholds[0].MinMeters);
+        Assert.Equal(3.0, thresholds[0].MaxMeters);
+        Assert.Equal("Alerta", thresholds[2].Label);
+        Assert.Null(thresholds[2].MaxMeters);
+    }
+
+    [Fact]
+    public void ParseRiverThresholds_Should_Throw_When_NoConditionsArePublished()
+    {
+        Assert.Throws<FormatException>(() => AlertaBluParser.ParseRiverThresholds("""{"condicoes":[]}"""));
+    }
+
+    [Fact]
+    public void HighlightCurrent_Should_FlagLowestBand_When_LevelIsBelowEveryPublishedBand()
+    {
+        // Arrange
+        var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
+
+        // Act: a re-baselined or negative reading, below the lowest band's 0m start.
+        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: -0.5);
+
+        // Assert
+        Assert.True(flagged[0].IsCurrent);
+        Assert.All(flagged.Skip(1), b => Assert.False(b.IsCurrent));
+    }
+
+    [Fact]
+    public void HighlightCurrent_Should_TreatUpperBound_AsExclusive()
+    {
+        // Arrange
+        var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
+
+        // Act: exactly 3,0m is where "Atenção" starts, so it must not stay in "Normalidade".
+        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: 3.0);
+
+        // Assert
+        Assert.False(flagged[0].IsCurrent);
+        Assert.True(flagged[1].IsCurrent);
+    }
+
+    [Fact]
+    public void HighlightCurrent_Should_FlagTopBand_When_LevelIsAboveEveryUpperBound()
+    {
+        // Arrange
+        var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
+
+        // Act: the highest band ("Alerta") is open-ended.
+        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: 10.0);
+
+        // Assert
+        Assert.True(flagged[2].IsCurrent);
+        Assert.All(flagged.Take(2), b => Assert.False(b.IsCurrent));
+    }
+
+    [Fact]
+    public void HighlightCurrent_Should_ReturnBandsUnchanged_When_ThereIsNoReadingToPlace()
+    {
+        // Arrange
+        var thresholds = AlertaBluParser.ParseRiverThresholds(Fixtures.NivelOficialJson);
+
+        // Act
+        var flagged = AlertaBluParser.HighlightCurrent(thresholds, level: null);
+
+        // Assert
+        Assert.All(flagged, b => Assert.False(b.IsCurrent));
+    }
+
     #endregion
 
     #region /p/detalhada

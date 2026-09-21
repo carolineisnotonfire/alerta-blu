@@ -29,6 +29,7 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
             .Respond("api.open-meteo.com", Fixtures.OpenMeteoJson)
             .Respond("/p/detalhada", Fixtures.DetalhadaHtml)
             .Respond("/d/nivel-do-rio", Fixtures.RiverHtml)
+            .Respond("nivel_oficial.json", Fixtures.NivelOficialJson)
             .Respond("/p/cotas", Fixtures.CotasHtml)
             .Respond("/d/barragens", Fixtures.BarragensHtml);
 
