@@ -201,8 +201,8 @@ public sealed class MainViewModel : ObservableBase
 
     private bool IsTodaySelected => _selectedForecastIndex == 0;
 
-    private DailyForecast? SelectedDay =>
-        (uint)_selectedForecastIndex < (uint)Forecast.Count ? Forecast[_selectedForecastIndex] : null;
+    private ForecastDayViewModel? SelectedDay =>
+        (uint)_selectedForecastIndex < (uint)ForecastDays.Count ? ForecastDays[_selectedForecastIndex] : null;
 
     /// <summary>
     /// Moves the hero card to another day. Out-of-range indices are ignored rather than clamped:

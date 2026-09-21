@@ -292,15 +292,15 @@ public class AlertaBluParserTests
     [Fact]
     public void ParseForecast_Should_KeepDayWithDescription_When_NoTemperatureMatches()
     {
-        // Act
+        // Act: a day the regexes cannot read still keeps its date and description, so the
+        // Presentation layer can render date + excerpt (see ForecastDayViewModelTests).
         var saturday = AlertaBluParser.ParseForecast(Fixtures.DetalhadaHtml)
             .Single(f => f.Date == new DateOnly(2026, 8, 15));
 
-        // Assert: a day the regexes cannot read still renders as date + excerpt.
+        // Assert
         Assert.Null(saturday.Min);
         Assert.Null(saturday.Max);
-        Assert.True(saturday.HasNoTemperatures);
-        Assert.NotEmpty(saturday.Summary);
+        Assert.NotEmpty(saturday.Description);
     }
 
     [Fact]
