@@ -1,5 +1,6 @@
 using AlertaBlu.Infrastructure;
 using AlertaBlu.ViewModels;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +19,18 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
-		builder.Services.AddAlertaBluInfrastructure(FileSystem.AppDataDirectory);
+		// Overrides AlertaBluOptions' code defaults, e.g. for a hotfix that doesn't require an
+		// app-store release. Missing is fine: every option already has a working default.
+		try
+		{
+			using var stream = FileSystem.OpenAppPackageFileAsync("appsettings.json").GetAwaiter().GetResult();
+			builder.Configuration.AddJsonStream(stream);
+		}
+		catch (FileNotFoundException)
+		{
+		}
+
+		builder.Services.AddAlertaBluInfrastructure(FileSystem.AppDataDirectory, builder.Configuration);
 
 		builder.Services.AddSingleton<MainViewModel>();
 		// Transient, not singleton: a Page can only ever belong to one parent, so a singleton

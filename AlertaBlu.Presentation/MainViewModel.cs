@@ -12,11 +12,9 @@ namespace AlertaBlu.ViewModels;
 /// </summary>
 public sealed class MainViewModel : ObservableBase, IDisposable
 {
-    /// <summary>Ceiling for a whole refresh, so a hung endpoint cannot pin the spinner forever.</summary>
-    private static readonly TimeSpan RefreshTimeout = TimeSpan.FromSeconds(45);
-
     private readonly LoadDashboardUseCase _loadDashboard;
     private readonly IClock _clock;
+    private readonly TimeSpan _refreshTimeout;
     private readonly ILogger<MainViewModel> _logger;
 
     private CancellationTokenSource? _cancellation;
@@ -37,10 +35,12 @@ public sealed class MainViewModel : ObservableBase, IDisposable
     /// </summary>
     private string[] _allCotaSearchIndex = [];
 
-    public MainViewModel(LoadDashboardUseCase loadDashboard, IClock clock, ILogger<MainViewModel> logger)
+    public MainViewModel(
+        LoadDashboardUseCase loadDashboard, IClock clock, AlertaBluOptions options, ILogger<MainViewModel> logger)
     {
         _loadDashboard = loadDashboard;
         _clock = clock;
+        _refreshTimeout = TimeSpan.FromSeconds(options.RefreshTimeoutSeconds);
         _logger = logger;
         RefreshCommand = new RelayCommand(async () => await LoadAsync().ConfigureAwait(false));
         ToggleRiverCommand = new RelayCommand(() => IsRiverExpanded = !IsRiverExpanded);
@@ -287,7 +287,7 @@ public sealed class MainViewModel : ObservableBase, IDisposable
         try
         {
             _cancellation?.Dispose();
-            _cancellation = new CancellationTokenSource(RefreshTimeout);
+            _cancellation = new CancellationTokenSource(_refreshTimeout);
 
             var snapshot = await _loadDashboard.ExecuteAsync(_cancellation.Token).ConfigureAwait(true);
 

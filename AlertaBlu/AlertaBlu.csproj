@@ -31,7 +31,7 @@
 		<ApplicationTitle>AlertaBlu</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.alertablu</ApplicationId>
+		<ApplicationId>com.alertablu.app</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -68,6 +68,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
 	</ItemGroup>
 
 	<!--

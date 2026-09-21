@@ -12,27 +12,28 @@ namespace AlertaBlu.Infrastructure;
 /// endpoint owns its own failure handling, so one being down, slow or reshaped degrades exactly one
 /// section instead of the whole screen.
 /// </summary>
-public sealed class AlertaBluService(HttpClient httpClient, ILogger<AlertaBluService> logger)
+public sealed class AlertaBluService(HttpClient httpClient, AlertaBluOptions options, ILogger<AlertaBluService> logger)
     : IAlertaBluGateway
 {
     private readonly HttpClient _httpClient = httpClient;
+    private readonly AlertaBluOptions _options = options;
     private readonly ILogger<AlertaBluService> _logger = logger;
 
     public Task<SectionResult<TemperatureReading>> GetTemperatureAsync(CancellationToken cancellationToken = default) =>
-        LoadAsync(AlertaBluEndpoints.Temperaturas, AlertaBluParser.ParseLatestTemperature, "temperatura", cancellationToken);
+        LoadAsync(_options.TemperaturasUrl, AlertaBluParser.ParseLatestTemperature, "temperatura", cancellationToken);
 
     public Task<SectionResult<RiverLevel>> GetRiverLevelAsync(CancellationToken cancellationToken = default) =>
-        LoadAsync(AlertaBluEndpoints.NivelDoRio, AlertaBluParser.ParseRiverLevel, "nível do rio", cancellationToken);
+        LoadAsync(_options.NivelDoRioUrl, AlertaBluParser.ParseRiverLevel, "nível do rio", cancellationToken);
 
     public Task<SectionResult<IReadOnlyList<RiverThreshold>>> GetRiverThresholdsAsync(
         CancellationToken cancellationToken = default) =>
-        LoadAsync(AlertaBluEndpoints.NivelOficial, AlertaBluParser.ParseRiverThresholds, "cotas oficiais", cancellationToken);
+        LoadAsync(_options.NivelOficialUrl, AlertaBluParser.ParseRiverThresholds, "cotas oficiais", cancellationToken);
 
     public Task<SectionResult<IReadOnlyList<CotaEnchente>>> GetCotasAsync(CancellationToken cancellationToken = default) =>
-        LoadAsync(AlertaBluEndpoints.Cotas, AlertaBluParser.ParseCotas, "cotas", cancellationToken);
+        LoadAsync(_options.CotasUrl, AlertaBluParser.ParseCotas, "cotas", cancellationToken);
 
     public Task<SectionResult<IReadOnlyList<Barragem>>> GetBarragensAsync(CancellationToken cancellationToken = default) =>
-        LoadAsync(AlertaBluEndpoints.Barragens, AlertaBluParser.ParseBarragens, "barragens", cancellationToken);
+        LoadAsync(_options.BarragensUrl, AlertaBluParser.ParseBarragens, "barragens", cancellationToken);
 
     /// <summary>
     /// Splits the single "detalhada" download into the two cards it feeds. Today's extremes are
@@ -41,7 +42,7 @@ public sealed class AlertaBluService(HttpClient httpClient, ILogger<AlertaBluSer
     public async Task<DetalhadaResult> GetDetalhadaAsync(CancellationToken cancellationToken = default)
     {
         var detalhada = await LoadAsync(
-            AlertaBluEndpoints.Detalhada, static html => html, "previsão", cancellationToken)
+            _options.DetalhadaUrl, static html => html, "previsão", cancellationToken)
             .ConfigureAwait(false);
 
         if (!detalhada.HasValue)
@@ -85,7 +86,7 @@ public sealed class AlertaBluService(HttpClient httpClient, ILogger<AlertaBluSer
     public async Task<OpenMeteoResult> GetOpenMeteoAsync(CancellationToken cancellationToken = default)
     {
         var openMeteo = await LoadAsync(
-            AlertaBluEndpoints.OpenMeteo, static json => json, "sensação térmica", cancellationToken)
+            _options.OpenMeteoUrl, static json => json, "sensação térmica", cancellationToken)
             .ConfigureAwait(false);
 
         if (!openMeteo.HasValue)

@@ -1,3 +1,4 @@
+using AlertaBlu.Application;
 using AlertaBlu.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -13,7 +14,7 @@ namespace AlertaBlu.Tests;
 public class AlertaBluServiceTests
 {
     private static AlertaBluService CreateGateway(StubHttpMessageHandler handler) =>
-        new(new HttpClient(handler), NullLogger<AlertaBluService>.Instance);
+        new(new HttpClient(handler), new AlertaBluOptions(), NullLogger<AlertaBluService>.Instance);
 
     [Fact]
     public async Task GetTemperatureAsync_Should_ReturnLatestReading_When_FeedIsHealthy()
