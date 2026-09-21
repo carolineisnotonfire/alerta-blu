@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using AlertaBlu.Domain;
 
 namespace AlertaBlu.Infrastructure;
 
@@ -66,6 +67,39 @@ internal sealed class CondicaoDto
 }
 
 /// <summary>
+/// On-disk shape of <see cref="AlertaBlu.Domain.DashboardSnapshot"/>: plain arrays and one
+/// "as of" timestamp per section, rather than the domain's <c>SectionResult&lt;T&gt;</c>/
+/// <c>IReadOnlyList&lt;T&gt;</c> shapes, so serialisation stays inside the source generator's
+/// well-trodden path (arrays and records, no interfaces or generics to resolve).
+/// </summary>
+internal sealed class CachedDashboardDto
+{
+    public CurrentWeather? Weather { get; set; }
+
+    public DateTimeOffset? WeatherAsOf { get; set; }
+
+    public DailyForecast[]? Forecast { get; set; }
+
+    public DateTimeOffset? ForecastAsOf { get; set; }
+
+    public RiverLevel? River { get; set; }
+
+    public DateTimeOffset? RiverAsOf { get; set; }
+
+    public RiverThreshold[]? RiverThresholds { get; set; }
+
+    public DateTimeOffset? RiverThresholdsAsOf { get; set; }
+
+    public CotaEnchente[]? Cotas { get; set; }
+
+    public DateTimeOffset? CotasAsOf { get; set; }
+
+    public Barragem[]? Barragens { get; set; }
+
+    public DateTimeOffset? BarragensAsOf { get; set; }
+}
+
+/// <summary>
 /// Source-generated serialisation metadata. Required rather than optional here: MAUI release
 /// builds trim the app, and reflection-based <c>System.Text.Json</c> would break at runtime.
 /// </summary>
@@ -73,4 +107,5 @@ internal sealed class CondicaoDto
 [JsonSerializable(typeof(TemperaturaDto[]))]
 [JsonSerializable(typeof(OpenMeteoResponse))]
 [JsonSerializable(typeof(NivelOficialResponse))]
+[JsonSerializable(typeof(CachedDashboardDto))]
 internal sealed partial class AlertaBluJsonContext : JsonSerializerContext;

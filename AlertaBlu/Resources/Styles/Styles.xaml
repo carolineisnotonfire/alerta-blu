@@ -143,6 +143,14 @@
         <Setter Property="Margin" Value="0,6,0,0" />
     </Style>
 
+    <!-- Shown instead of ErrorTextStyle when a section is rendering cached data because the live
+         fetch failed: informational, not alarming, since the section itself still has content. -->
+    <Style x:Key="StaleTextStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource TextNeutral400}" />
+        <Setter Property="Margin" Value="0,6,0,0" />
+    </Style>
+
     <!-- ============ Tags ============ -->
 
     <Style x:Key="TagStyle" TargetType="Border">

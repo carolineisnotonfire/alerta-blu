@@ -1,3 +1,5 @@
+using AlertaBlu.Application;
+using AlertaBlu.Domain;
 using AlertaBlu.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -10,8 +12,8 @@ namespace AlertaBlu.Tests;
 /// </summary>
 public class AlertaBluServiceTests
 {
-    private static AlertaBluService CreateService(StubHttpMessageHandler handler) =>
-        new(new HttpClient(handler), NullLogger<AlertaBluService>.Instance);
+    private static AlertaBluService CreateService(StubHttpMessageHandler handler, IDashboardCache? cache = null) =>
+        new(new HttpClient(handler), cache ?? new FakeDashboardCache(), NullLogger<AlertaBluService>.Instance);
 
     [Fact]
     public async Task GetDashboardAsync_Should_PopulateEverySection_When_AllSourcesAreHealthy()
@@ -176,4 +178,133 @@ public class AlertaBluServiceTests
         // Assert
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
     }
+
+    #region Offline cache
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_ServeStaleCache_When_LiveFetchFails()
+    {
+        // Arrange: yesterday's reading is all that is available for the river card.
+        var staleAsOf = DateTimeOffset.Now.AddHours(-6);
+        var cache = new FakeDashboardCache
+        {
+            Seeded = new DashboardSnapshot
+            {
+                River = SectionResult<RiverLevel>.Stale(new RiverLevel { LevelMeters = 1.90 }, staleAsOf),
+            },
+        };
+        var service = CreateService(StubHttpMessageHandler.Healthy().Without("/d/nivel-do-rio"), cache);
+
+        // Act
+        var snapshot = await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert: the section still renders, flagged stale, rather than showing an error.
+        Assert.True(snapshot.River.HasValue);
+        Assert.False(snapshot.River.HasError);
+        Assert.True(snapshot.River.IsStale);
+        Assert.Equal(1.90, snapshot.River.Value!.LevelMeters, precision: 2);
+        Assert.Equal(staleAsOf, snapshot.River.StaleAsOf);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_PreferLiveData_Over_StaleCache_When_LiveFetchSucceeds()
+    {
+        // Arrange
+        var cache = new FakeDashboardCache
+        {
+            Seeded = new DashboardSnapshot
+            {
+                River = SectionResult<RiverLevel>.Stale(
+                    new RiverLevel { LevelMeters = 0.10 }, DateTimeOffset.Now.AddDays(-1)),
+            },
+        };
+        var service = CreateService(StubHttpMessageHandler.Healthy(), cache);
+
+        // Act
+        var snapshot = await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(snapshot.River.IsStale);
+        Assert.Equal(2.25, snapshot.River.Value!.LevelMeters, precision: 2);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_ReportError_When_LiveFetchFails_And_NoCacheExists()
+    {
+        // Arrange: first-ever launch, offline. Unchanged from the pre-cache behaviour.
+        var service = CreateService(StubHttpMessageHandler.Healthy().Without("/d/nivel-do-rio"));
+
+        // Act
+        var snapshot = await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(snapshot.River.HasValue);
+        Assert.True(snapshot.River.HasError);
+        Assert.False(snapshot.River.IsStale);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_SkipCotasNetworkFetch_When_CachedCopyIsWithinTtl()
+    {
+        // Arrange
+        var handler = StubHttpMessageHandler.Healthy();
+        var cache = new FakeDashboardCache
+        {
+            Seeded = new DashboardSnapshot
+            {
+                Cotas = SectionResult<IReadOnlyList<CotaEnchente>>.Stale(
+                    [new CotaEnchente { Logradouro = "Rua Cache" }], DateTimeOffset.Now.AddHours(-1)),
+            },
+        };
+        var service = CreateService(handler, cache);
+
+        // Act
+        var snapshot = await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert: served from cache, not re-downloaded, and not flagged stale (the skip is
+        // deliberate policy, not a fetch failure).
+        Assert.DoesNotContain(handler.RequestedUrls, url => url.Contains("/p/cotas", StringComparison.Ordinal));
+        Assert.False(snapshot.Cotas.IsStale);
+        Assert.Equal("Rua Cache", snapshot.Cotas.Value!.Single().Logradouro);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_FetchCotas_When_CachedCopyIsOlderThanTtl()
+    {
+        // Arrange
+        var handler = StubHttpMessageHandler.Healthy();
+        var cache = new FakeDashboardCache
+        {
+            Seeded = new DashboardSnapshot
+            {
+                Cotas = SectionResult<IReadOnlyList<CotaEnchente>>.Stale(
+                    [new CotaEnchente { Logradouro = "Rua Velha" }], DateTimeOffset.Now.AddHours(-25)),
+            },
+        };
+        var service = CreateService(handler, cache);
+
+        // Act
+        await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(handler.RequestedUrls, url => url.Contains("/p/cotas", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_Should_WriteTheMergedSnapshot_BackToCache()
+    {
+        // Arrange
+        var cache = new FakeDashboardCache();
+        var service = CreateService(StubHttpMessageHandler.Healthy(), cache);
+
+        // Act
+        await service.GetDashboardAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(cache.LastWritten);
+        Assert.True(cache.LastWritten.Weather.HasValue);
+        Assert.True(cache.LastWritten.River.HasValue);
+    }
+
+    #endregion
 }

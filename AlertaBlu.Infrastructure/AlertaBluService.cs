@@ -15,14 +15,24 @@ namespace AlertaBlu.Infrastructure;
 /// "detalhada" page (today's min/max and the 5-day strip) and the Open-Meteo response (today's
 /// sensação térmica and the per-day figures behind the forecast chips).
 /// </remarks>
-public sealed class AlertaBluService(HttpClient httpClient, ILogger<AlertaBluService> logger)
+public sealed class AlertaBluService(HttpClient httpClient, IDashboardCache cache, ILogger<AlertaBluService> logger)
     : IAlertaBluService
 {
+    /// <summary>
+    /// Cotas rarely changes (street flood thresholds are edited maybe yearly) and is by far the
+    /// heaviest download (~700 KB), so a cached copy this fresh is served without hitting the
+    /// network at all.
+    /// </summary>
+    private static readonly TimeSpan CotasCacheTtl = TimeSpan.FromHours(24);
+
     private readonly HttpClient _httpClient = httpClient;
+    private readonly IDashboardCache _cache = cache;
     private readonly ILogger<AlertaBluService> _logger = logger;
 
     public async Task<DashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default)
     {
+        var cached = await _cache.ReadAsync(cancellationToken).ConfigureAwait(false) ?? new DashboardSnapshot();
+
         var temperatureTask = LoadAsync(
             AlertaBluEndpoints.Temperaturas, AlertaBluParser.ParseLatestTemperature, "temperatura", cancellationToken);
         var detalhadaTask = LoadAsync(
@@ -33,8 +43,9 @@ public sealed class AlertaBluService(HttpClient httpClient, ILogger<AlertaBluSer
             AlertaBluEndpoints.NivelDoRio, AlertaBluParser.ParseRiverLevel, "nível do rio", cancellationToken);
         var thresholdsTask = LoadAsync(
             AlertaBluEndpoints.NivelOficial, AlertaBluParser.ParseRiverThresholds, "cotas oficiais", cancellationToken);
-        var cotasTask = LoadAsync(
-            AlertaBluEndpoints.Cotas, AlertaBluParser.ParseCotas, "cotas", cancellationToken);
+        var cotasTask = IsCotasCacheFreshEnough(cached)
+            ? Task.FromResult(SectionResult<IReadOnlyList<CotaEnchente>>.Ok(cached.Cotas.Value!))
+            : LoadAsync(AlertaBluEndpoints.Cotas, AlertaBluParser.ParseCotas, "cotas", cancellationToken);
         var barragensTask = LoadAsync(
             AlertaBluEndpoints.Barragens, AlertaBluParser.ParseBarragens, "barragens", cancellationToken);
 
@@ -46,20 +57,45 @@ public sealed class AlertaBluService(HttpClient httpClient, ILogger<AlertaBluSer
         var temperature = await temperatureTask.ConfigureAwait(false);
         var detalhada = await detalhadaTask.ConfigureAwait(false);
         var openMeteo = await openMeteoTask.ConfigureAwait(false);
-        var river = await riverTask.ConfigureAwait(false);
 
         var (forecast, extremes) = ParseDetalhada(detalhada);
         var (apparent, dailyConditions) = ParseOpenMeteo(openMeteo);
 
-        return new DashboardSnapshot
+        // The stale-cache fallback for a failed live fetch, so one dropped request degrades to
+        // "showing data from HH:mm" rather than a blank section.
+        var river = WithCacheFallback(await riverTask.ConfigureAwait(false), cached.River);
+
+        var snapshot = new DashboardSnapshot
         {
-            Weather = BuildWeather(temperature, apparent, extremes),
-            Forecast = MergeDailyConditions(forecast, dailyConditions),
+            Weather = WithCacheFallback(BuildWeather(temperature, apparent, extremes), cached.Weather),
+            Forecast = WithCacheFallback(MergeDailyConditions(forecast, dailyConditions), cached.Forecast),
             River = river,
-            RiverThresholds = HighlightCurrentBand(await thresholdsTask.ConfigureAwait(false), river),
-            Cotas = await cotasTask.ConfigureAwait(false),
-            Barragens = await barragensTask.ConfigureAwait(false),
+            RiverThresholds = WithCacheFallback(
+                HighlightCurrentBand(await thresholdsTask.ConfigureAwait(false), river), cached.RiverThresholds),
+            Cotas = WithCacheFallback(await cotasTask.ConfigureAwait(false), cached.Cotas),
+            Barragens = WithCacheFallback(await barragensTask.ConfigureAwait(false), cached.Barragens),
         };
+
+        await _cache.WriteAsync(snapshot, cancellationToken).ConfigureAwait(false);
+
+        return snapshot;
+    }
+
+    private static bool IsCotasCacheFreshEnough(DashboardSnapshot cached) =>
+        cached.Cotas.Value is not null
+        && cached.Cotas.StaleAsOf is { } asOf
+        && DateTimeOffset.Now - asOf < CotasCacheTtl;
+
+    /// <summary>Falls back to a cached value, marked stale, when the live fetch failed.</summary>
+    private static SectionResult<T> WithCacheFallback<T>(SectionResult<T> live, SectionResult<T> cached)
+        where T : class
+    {
+        if (live.HasValue || cached.Value is not { } cachedValue)
+        {
+            return live;
+        }
+
+        return SectionResult<T>.Stale(cachedValue, cached.StaleAsOf ?? DateTimeOffset.Now);
     }
 
     /// <summary>

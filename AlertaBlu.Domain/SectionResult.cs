@@ -10,12 +10,19 @@ namespace AlertaBlu.Domain;
 /// value type means <c>default(T)</c> rather than <c>Nullable&lt;T&gt;</c>, which would make the
 /// null check in <see cref="HasValue"/> silently always true.
 /// </remarks>
-public readonly record struct SectionResult<T>(T? Value, string? Error)
+public readonly record struct SectionResult<T>(T? Value, string? Error, DateTimeOffset? StaleAsOf)
     where T : class
 {
-    public static SectionResult<T> Ok(T value) => new(value, null);
+    public static SectionResult<T> Ok(T value) => new(value, null, null);
 
-    public static SectionResult<T> Fail(string error) => new(default, error);
+    public static SectionResult<T> Fail(string error) => new(default, error, null);
+
+    /// <summary>
+    /// A cached value served because the live fetch failed (or was skipped). Carries no error, so
+    /// the section still renders normally; <see cref="StaleAsOf"/> is when this value was last
+    /// genuinely fresh, for a "dados de HH:mm" indicator.
+    /// </summary>
+    public static SectionResult<T> Stale(T value, DateTimeOffset asOf) => new(value, null, asOf);
 
     /// <summary>Not yet loaded: neither a value nor an error.</summary>
     public static SectionResult<T> Empty => default;
@@ -23,6 +30,8 @@ public readonly record struct SectionResult<T>(T? Value, string? Error)
     public bool HasValue => Value is not null && Error is null;
 
     public bool HasError => Error is not null;
+
+    public bool IsStale => StaleAsOf is not null;
 }
 
 /// <summary>Everything the home screen needs, with per-section success/failure.</summary>

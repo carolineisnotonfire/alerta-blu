@@ -48,6 +48,11 @@ public sealed class MainViewModel : ObservableBase
 
     public bool HasWeatherError => WeatherError is not null;
 
+    /// <summary>Set when <see cref="Weather"/> is cached data shown because the live fetch failed.</summary>
+    public string? WeatherStaleLabel { get; private set; }
+
+    public bool HasWeatherStale => WeatherStaleLabel is not null;
+
     public IReadOnlyList<DailyForecast> Forecast { get; private set; } = [];
 
     /// <summary>The forecast wrapped for the chip strip, one selectable row per day.</summary>
@@ -59,6 +64,10 @@ public sealed class MainViewModel : ObservableBase
 
     public bool HasForecastError => ForecastError is not null;
 
+    public string? ForecastStaleLabel { get; private set; }
+
+    public bool HasForecastStale => ForecastStaleLabel is not null;
+
     public RiverLevel? River { get; private set; }
 
     public string? RiverError { get; private set; }
@@ -66,6 +75,10 @@ public sealed class MainViewModel : ObservableBase
     public bool HasRiver => River is not null;
 
     public bool HasRiverError => RiverError is not null;
+
+    public string? RiverStaleLabel { get; private set; }
+
+    public bool HasRiverStale => RiverStaleLabel is not null;
 
     /// <summary>
     /// Surfaced on the page view model so the trend arrow can switch on it even before the first
@@ -82,6 +95,10 @@ public sealed class MainViewModel : ObservableBase
 
     public bool HasRiverThresholdsError => RiverThresholdsError is not null;
 
+    public string? RiverThresholdsStaleLabel { get; private set; }
+
+    public bool HasRiverThresholdsStale => RiverThresholdsStaleLabel is not null;
+
     /// <summary>Cotas matching <see cref="CotaSearch"/>; the full table when the box is empty.</summary>
     public IReadOnlyList<CotaEnchente> Cotas { get; private set; } = [];
 
@@ -90,6 +107,10 @@ public sealed class MainViewModel : ObservableBase
     public bool HasCotas => Cotas.Count > 0;
 
     public bool HasCotasError => CotasError is not null;
+
+    public string? CotasStaleLabel { get; private set; }
+
+    public bool HasCotasStale => CotasStaleLabel is not null;
 
     /// <summary>
     /// Whether the table loaded at all, independently of the current filter. The search box binds
@@ -115,6 +136,10 @@ public sealed class MainViewModel : ObservableBase
     public bool HasBarragens => Dams.Count > 0;
 
     public bool HasBarragensError => BarragensError is not null;
+
+    public string? BarragensStaleLabel { get; private set; }
+
+    public bool HasBarragensStale => BarragensStaleLabel is not null;
 
     #endregion
 
@@ -289,26 +314,39 @@ public sealed class MainViewModel : ObservableBase
 
         Weather = snapshot.Weather.Value;
         WeatherError = snapshot.Weather.Error;
+        WeatherStaleLabel = StaleLabel(snapshot.Weather);
 
         Forecast = snapshot.Forecast.Value ?? [];
         ForecastError = snapshot.Forecast.Error;
+        ForecastStaleLabel = StaleLabel(snapshot.Forecast);
         RebuildForecastDays();
 
         River = snapshot.River.Value;
         RiverError = snapshot.River.Error;
+        RiverStaleLabel = StaleLabel(snapshot.River);
 
         RiverThresholds = snapshot.RiverThresholds.Value ?? [];
         RiverThresholdsError = snapshot.RiverThresholds.Error;
+        RiverThresholdsStaleLabel = StaleLabel(snapshot.RiverThresholds);
 
         _allCotas = snapshot.Cotas.Value ?? [];
         CotasError = snapshot.Cotas.Error;
+        CotasStaleLabel = StaleLabel(snapshot.Cotas);
         ApplyCotaFilter(notify: false);
 
         Dams = (snapshot.Barragens.Value ?? []).Select(static dam => new DamCardViewModel(dam)).ToArray();
         BarragensError = snapshot.Barragens.Error;
+        BarragensStaleLabel = StaleLabel(snapshot.Barragens);
 
         LastUpdatedLabel = $"atualizado às {snapshot.LoadedAt:HH:mm}";
     }
+
+    /// <summary>
+    /// "dados de HH:mm" when <paramref name="section"/> is cached data shown because the live
+    /// fetch failed, so the section still renders instead of going blank; null otherwise.
+    /// </summary>
+    private static string? StaleLabel<T>(SectionResult<T> section) where T : class =>
+        section.StaleAsOf is { } asOf ? $"dados de {asOf.LocalDateTime:HH:mm}" : null;
 
     /// <summary>
     /// Rebuilds the chip strip after a refresh, keeping the day the user was looking at whenever
@@ -371,14 +409,19 @@ public sealed class MainViewModel : ObservableBase
     private static readonly string[] RefreshableProperties =
     [
         nameof(Weather), nameof(WeatherError), nameof(HasWeather), nameof(HasWeatherError),
+        nameof(WeatherStaleLabel), nameof(HasWeatherStale),
         nameof(Forecast), nameof(ForecastDays), nameof(ForecastError), nameof(HasForecast),
-        nameof(HasForecastError), nameof(SelectedForecastIndex),
+        nameof(HasForecastError), nameof(ForecastStaleLabel), nameof(HasForecastStale),
+        nameof(SelectedForecastIndex),
         nameof(River), nameof(RiverError), nameof(HasRiver), nameof(HasRiverError), nameof(RiverTrend),
+        nameof(RiverStaleLabel), nameof(HasRiverStale),
         nameof(RiverThresholds), nameof(RiverThresholdsError), nameof(HasRiverThresholds),
-        nameof(HasRiverThresholdsError),
+        nameof(HasRiverThresholdsError), nameof(RiverThresholdsStaleLabel), nameof(HasRiverThresholdsStale),
         nameof(Cotas), nameof(CotasError), nameof(HasCotas), nameof(HasCotasError),
         nameof(HasAnyCotas), nameof(HasNoCotaMatch), nameof(CotasCountLabel),
+        nameof(CotasStaleLabel), nameof(HasCotasStale),
         nameof(Dams), nameof(BarragensError), nameof(HasBarragens), nameof(HasBarragensError),
+        nameof(BarragensStaleLabel), nameof(HasBarragensStale),
         nameof(GlobalError), nameof(HasGlobalError), nameof(LastUpdatedLabel), nameof(IsInitialLoading),
     ];
 
