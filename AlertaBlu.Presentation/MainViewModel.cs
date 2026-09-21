@@ -99,7 +99,7 @@ public sealed class MainViewModel : ObservableBase
     public RiverTrend RiverTrend => River?.Trend ?? RiverTrend.Unknown;
 
     /// <summary>Official level bands, with the one holding the current reading flagged.</summary>
-    public IReadOnlyList<RiverThreshold> RiverThresholds { get; private set; } = [];
+    public IReadOnlyList<RiverThresholdViewModel> RiverThresholds { get; private set; } = [];
 
     public string? RiverThresholdsError { get; private set; }
 
@@ -337,7 +337,9 @@ public sealed class MainViewModel : ObservableBase
         RiverError = snapshot.River.Error;
         RiverStaleLabel = StaleLabel(snapshot.River);
 
-        RiverThresholds = snapshot.RiverThresholds.Value ?? [];
+        RiverThresholds = (snapshot.RiverThresholds.Value ?? [])
+            .Select(static threshold => new RiverThresholdViewModel(threshold))
+            .ToArray();
         RiverThresholdsError = snapshot.RiverThresholds.Error;
         RiverThresholdsStaleLabel = StaleLabel(snapshot.RiverThresholds);
 

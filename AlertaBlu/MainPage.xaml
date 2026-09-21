@@ -355,7 +355,7 @@
                             <VerticalStackLayout Spacing="6"
                                                  BindableLayout.ItemsSource="{Binding RiverThresholds}">
                                 <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="models:RiverThreshold">
+                                    <DataTemplate x:DataType="vm:RiverThresholdViewModel">
                                         <Border Style="{StaticResource BandRowStyle}">
                                             <Border.Triggers>
                                                 <DataTrigger TargetType="Border"

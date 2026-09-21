@@ -1,5 +1,3 @@
-using AlertaBlu.Domain.Common;
-
 namespace AlertaBlu.Domain;
 
 /// <summary>
@@ -9,7 +7,8 @@ namespace AlertaBlu.Domain;
 /// <remarks>
 /// Built from <c>static/data/nivel_oficial.json</c>, whose <c>condicoes</c> array publishes only
 /// the level at which each condition <em>starts</em>. The displayable range is therefore derived
-/// from consecutive entries, and the highest band is open-ended.
+/// from consecutive entries, and the highest band is open-ended. Display formatting
+/// (<c>RangeDisplay</c>) lives on the Presentation-layer <c>RiverThresholdViewModel</c> instead.
 /// </remarks>
 public sealed record RiverThreshold
 {
@@ -23,15 +22,6 @@ public sealed record RiverThreshold
 
     /// <summary>True when the latest reading falls inside this band.</summary>
     public bool IsCurrent { get; init; }
-
-    /// <summary>Complement of <see cref="IsCurrent"/>, for the "not highlighted" visual state.</summary>
-    public bool IsNotCurrent => !IsCurrent;
-
-    public string RangeDisplay => MaxMeters is { } max
-        ? MinMeters <= 0d
-            ? $"até {PtBr.Format(max, 2)} m"
-            : $"{PtBr.Format(MinMeters, 2)} – {PtBr.Format(max, 2)} m"
-        : $"acima de {PtBr.Format(MinMeters, 2)} m";
 
     /// <summary>Whether a reading falls in this band; the upper bound is exclusive.</summary>
     public bool Contains(double level) =>
