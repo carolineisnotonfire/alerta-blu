@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using AlertaBlu.Domain;
 
 namespace AlertaBlu.ViewModels;
@@ -13,12 +14,12 @@ public sealed class DamCardViewModel : ObservableBase
     public DamCardViewModel(Barragem data)
     {
         Data = data;
-        ToggleCommand = new Command(() => IsExpanded = !IsExpanded);
+        ToggleCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
     }
 
     public Barragem Data { get; }
 
-    public Command ToggleCommand { get; }
+    public ICommand ToggleCommand { get; }
 
     public bool IsExpanded
     {

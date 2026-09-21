@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using AlertaBlu.Domain;
 
 namespace AlertaBlu.ViewModels;
@@ -18,7 +19,7 @@ public sealed class ForecastDayViewModel : ObservableBase
     {
         Data = data;
         Index = index;
-        SelectCommand = new Command(() => onSelected(this));
+        SelectCommand = new RelayCommand(() => onSelected(this));
     }
 
     public DailyForecast Data { get; }
@@ -26,7 +27,7 @@ public sealed class ForecastDayViewModel : ObservableBase
     /// <summary>Position in the strip; index 0 is today, the only day with live measurements.</summary>
     public int Index { get; }
 
-    public Command SelectCommand { get; }
+    public ICommand SelectCommand { get; }
 
     public bool IsSelected
     {

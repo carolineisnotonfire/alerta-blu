@@ -10,14 +10,15 @@
 	</PropertyGroup>
 
 	<!--
-		The domain, application and infrastructure layers are plain net10.0 libraries free of MAUI
-		types, so they are referenced as projects. Only the presentation head multi-targets platform
-		TFMs, and nothing under test lives there.
+		The domain, application, infrastructure and presentation layers are plain net10.0
+		libraries free of MAUI types, so they are referenced as projects. Only the MAUI head
+		multi-targets platform TFMs, and nothing under test lives there.
 	-->
 	<ItemGroup>
 		<ProjectReference Include="..\AlertaBlu.Domain\AlertaBlu.Domain.csproj" />
 		<ProjectReference Include="..\AlertaBlu.Application\AlertaBlu.Application.csproj" />
 		<ProjectReference Include="..\AlertaBlu.Infrastructure\AlertaBlu.Infrastructure.csproj" />
+		<ProjectReference Include="..\AlertaBlu.Presentation\AlertaBlu.Presentation.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

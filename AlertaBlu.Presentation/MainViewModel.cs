@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using AlertaBlu.Application;
 using AlertaBlu.Domain;
 using Microsoft.Extensions.Logging;
@@ -30,13 +31,13 @@ public sealed class MainViewModel : ObservableBase
     {
         _loadDashboard = loadDashboard;
         _logger = logger;
-        RefreshCommand = new Command(async () => await LoadAsync().ConfigureAwait(false));
-        ToggleRiverCommand = new Command(() => IsRiverExpanded = !IsRiverExpanded);
+        RefreshCommand = new RelayCommand(async () => await LoadAsync().ConfigureAwait(false));
+        ToggleRiverCommand = new RelayCommand(() => IsRiverExpanded = !IsRiverExpanded);
     }
 
-    public Command RefreshCommand { get; }
+    public ICommand RefreshCommand { get; }
 
-    public Command ToggleRiverCommand { get; }
+    public ICommand ToggleRiverCommand { get; }
 
     #region Sections
 

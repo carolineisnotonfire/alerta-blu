@@ -43,8 +43,21 @@ internal sealed class FakeAlertaBluGateway : IAlertaBluGateway
 
     public int CotasCallCount { get; private set; }
 
-    public Task<SectionResult<TemperatureReading>> GetTemperatureAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(Temperature);
+    /// <summary>
+    /// When set, <see cref="GetTemperatureAsync"/> waits on this task before returning, so a test
+    /// can hold a <c>LoadAsync</c> call open to observe overlap/re-entrancy behaviour.
+    /// </summary>
+    public Task? TemperatureGate { get; set; }
+
+    public async Task<SectionResult<TemperatureReading>> GetTemperatureAsync(CancellationToken cancellationToken = default)
+    {
+        if (TemperatureGate is not null)
+        {
+            await TemperatureGate.ConfigureAwait(false);
+        }
+
+        return Temperature;
+    }
 
     public Task<DetalhadaResult> GetDetalhadaAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(Detalhada);

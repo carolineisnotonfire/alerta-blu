@@ -72,13 +72,15 @@
 
 	<!--
 		Presentation head and composition root. It binds the use-case port from the Application
-		layer to its Infrastructure implementation in MauiProgram; the Domain layer arrives
-		transitively, and HtmlAgilityPack no longer appears here at all because scraping is now
-		entirely behind the Infrastructure boundary.
+		layer to its Infrastructure implementation in MauiProgram, and hosts the view models from
+		AlertaBlu.Presentation (a plain net10.0 library so AlertaBlu.Tests can reference them
+		directly). The Domain layer arrives transitively, and HtmlAgilityPack no longer appears
+		here at all because scraping is now entirely behind the Infrastructure boundary.
 	-->
 	<ItemGroup>
 		<ProjectReference Include="..\AlertaBlu.Application\AlertaBlu.Application.csproj" />
 		<ProjectReference Include="..\AlertaBlu.Infrastructure\AlertaBlu.Infrastructure.csproj" />
+		<ProjectReference Include="..\AlertaBlu.Presentation\AlertaBlu.Presentation.csproj" />
 	</ItemGroup>
 
 </Project>
