@@ -21,11 +21,15 @@ public static class MauiProgram
 		builder.Services.AddAlertaBluInfrastructure(FileSystem.AppDataDirectory);
 
 		builder.Services.AddSingleton<MainViewModel>();
-		builder.Services.AddSingleton<MainPage>();
+		// Transient, not singleton: a Page can only ever belong to one parent, so a singleton
+		// breaks the moment a second route or ContentTemplate needs its own instance.
+		builder.Services.AddTransient<MainPage>();
 		builder.Services.AddSingleton<AppShell>();
 
 #if DEBUG
 		builder.Logging.AddDebug();
+#else
+		builder.Logging.AddAlertaBluFileLogging(FileSystem.AppDataDirectory);
 #endif
 
 		return builder.Build();
